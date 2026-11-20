@@ -1,100 +1,81 @@
-# Twin Tank Dive
+# SAT Streak
 
-An SAT practice game built on College Board's official question bank. You pilot
-a submarine with two systems:
-
-- **Engine = Math.** Math points fill the Engine tank and take you deeper.
-- **Light = Reading & Writing.** English points fill the Light tank and widen
-  the sub's light cone.
-
-Your final score is **2 × the lower tank**, so you can't ignore either section.
+A one-file SAT study game. Answer real SAT questions in a row without missing.
+Every right answer adds 1 to your streak, and the longer the streak, the more
+epic the world gets: Spark, Flame, Ocean, Storm, Galaxy, Supernova, Legendary.
+One wrong answer shatters the streak and drops you back to tier 1.
 
 ## Play
 
-Play online at https://andrewstrong615.github.io/SAT_STUDY-GAME/ or
-double-click `index.html`. There is no install, no build step and no backend.
+Open `index.html` in any browser while you're online. There is nothing to
+install or build.
 
-| File | What's in it |
-| --- | --- |
-| `index.html` | markup and styles |
-| `game.js` | logic, scoring, live questions, visuals, sound, storage |
-| `skills.js` | the list of SAT domains and skills |
-| `test.js` | automated tests (`node test.js`) |
-
-## A dive
-
-Seven missions, always in this order: Math, English, Math, English, Math,
-English, Fusion Boss. Each mission names a section, domain, skill and
-difficulty, for example "Math · Algebra · Linear inequalities · Hard", and
-shows a random question that fits it.
-
-- **Skill choice:** about half the time one of your weakest skills, otherwise a
-  skill you've tried least. "Change skill" swaps the assignment.
-- **Difficulty:** one easy, one medium and one hard per section. After 5 dives,
-  skills where you're over 80% shift toward medium and hard.
-- **Daily Dive** uses assignments seeded by the date. **Free Dive** is random.
-- **Fusion Boss:** two hard data questions back to back. Part A is Reading &
-  Writing · Command of Evidence (Quantitative). Part B is Math ·
-  Problem-Solving and Data Analysis.
-- You can leave mid-dive and resume later.
-
-## Scoring
-
-Tier ladder: Plankton 10 · Shrimp 25 · Krill 40 · Squid 60 · Anglerfish 80 ·
-One in a Krillion 100.
-
-Missions 1 to 6: incorrect is 0. A correct answer starts at Plankton (easy),
-Krill (medium) or Anglerfish (hard), and each bonus moves it up one tier, capped
-at One in a Krillion:
-
-- **Weak spot:** your stored accuracy in the skill is under 50% with at least 3
-  past attempts.
-- **Cross-current:** the previous mission in this dive was correct and from the
-  other section.
-- **No choices (Math only):** you solved it before looking at the choices. Math
-  questions hide their choices until you say whether you've solved it.
-  Typed-answer questions always count.
-
-Fusion Boss: both parts correct is 100 points (50 to each tank). One part
-correct is 50 points to that part's tank. No bonuses.
-
-Every number above lives in the `CONFIG` object at the top of `game.js`.
+- Tap an answer or press `1`–`4` (or `A`–`D`). `Enter` starts a new streak.
+- Settings on the start screen: Mixed / Math / Reading & Writing, an optional
+  timer (20, 40 or 75 seconds), and sound.
+- Your best streak and highest tier are saved in your browser.
 
 ## Where the questions come from
 
-Your browser asks the public endpoints behind College Board's
-[SAT Suite Question Bank](https://satsuite.collegeboard.org/practice/student-question-bank)
-for one question at a time and shows it in the game.
+Every question is drawn at random, live, from the public JSON endpoints behind
+the College Board
+[SAT Suite Question Bank](https://satsuitequestionbank.collegeboard.org/).
+There is no built-in question bank.
 
-- Nothing from College Board is stored in this repo, and the game never saves
-  question text, choices or explanations. It stores only the question ID,
-  section, domain, skill, difficulty and your result.
-- A question you've answered never comes up again.
-- The questions are © College Board. Use them for your own studying and don't
-  republish them. The endpoints are undocumented and could change. This game
-  isn't affiliated with College Board.
+- Questions never repeat within a streak.
+- College Board's Easy / Medium / Hard ratings follow the tiers: mostly easy
+  at the start, mostly hard from Supernova on.
+- Only multiple-choice questions are used, since the game has four buttons.
+  Answers stay in A–D order because the explanations refer to the letters.
+- The start screen shows "College Board connected" when it's working. You need
+  to be online.
 
-**If your browser can't load questions from College Board**, the start screen
-says so and the game switches to companion mode: each mission tells you what
-to filter for on College Board's site, and you log the Question ID and whether
-you got it right. Scoring is identical.
+**If the start screen says it couldn't reach College Board** while you are
+online, your browser is blocking the page from calling College Board directly.
+The fallback is the small helper in this folder: run `node server.mjs`
+(Node.js 18 or newer) and open http://localhost:8080. The game finds the
+helper by itself.
 
-## Editing skills
+The questions are © College Board. Nothing from College Board is stored in
+this repo or saved to disk: each question is fetched by your own browser when
+it's needed. Use them for your own studying and don't republish them. The
+endpoints are undocumented and could change at any time. This game isn't
+affiliated with College Board.
 
-`skills.js` is the one place skill names live. The game matches each `name`
-against College Board's skill labels, ignoring capitals and punctuation. If a
-label is worded differently, change `name` or add the wording to `aliases`.
-Don't change an `id`, because saved progress is stored under it.
+## Add your own questions (optional)
 
-## Your progress
+`const QUESTIONS = []` near the top of the script is empty. Anything you add
+there is used only when College Board can't be reached:
 
-Saved in your browser (localStorage): best score, daily streak, attempts and
-correct counts per skill, logged question IDs and an unfinished dive. History
-has Export and Import buttons that move it between devices as a JSON file. The
-daily streak counts consecutive days with a finished Daily Dive.
+```js
+{ id: "my-1", section: "Math", topic: "Algebra", difficulty: 2,
+  passage: "Optional short text shown above the question.",
+  question: "If 3x = 12, what is x?",
+  choices: ["2", "3", "4", "6"],   // always four, in A B C D order
+  answer: "C",                      // the correct letter
+  explanation: "Divide both sides by 3: x = 4." },
+```
 
-## Tests
+`section` must be exactly `"Math"` or `"Reading & Writing"`, and `difficulty`
+is 1 (easy), 2 (medium) or 3 (hard).
 
-`node test.js` runs the scoring engine through the worked example (Engine 220,
-Light 175, final score 350) plus the bonus rules, mission selection, duplicate
-IDs and save data.
+## Add or change tiers
+
+Find `const TIERS = [` in the script. Each tier is one object:
+
+```js
+{ name: "Aurora", min: 75,                       // starts at a streak of 75
+  colors: { bg: ["#001510", "#003b2f", "#02101f"],  // background gradient
+            accent: "#5effc3", accent2: "#9ec5ff",  // UI colors
+            glow: "rgba(94,255,195,.7)" },
+  bgSpeed: 0.05,                                  // gradient motion (0 = still)
+  effects: [{ type: "nebula" }, { type: "stars", count: 250, speed: 0.2 }],
+  ui: { burst: true, glowBorder: true },          // also: shake, fireCounter
+  difficulty: [0.05, 0.25, 0.7] },                // easy / medium / hard odds
+```
+
+Keep tiers in order of `min`. Available effect types: `float`, `embers`,
+`bubbles`, `waves`, `rays`, `rain`, `lightning`, `stars`, `nebula`, `shooting`,
+`pulse`, `aura`, `fireworks`. To invent a new effect, add an entry to the
+`EFFECTS` object with `init`, `update` and `draw` functions, then use its name
+in a tier. Milestone messages live in `MILESTONES` right below the tiers.
