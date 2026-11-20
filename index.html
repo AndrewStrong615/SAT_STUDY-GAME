@@ -279,6 +279,32 @@ body.shake-hard #app { animation: shakeHard .5s; }
 .milestone { position: fixed; left: 50%; top: 18%; z-index: 35; transform: translateX(-50%); padding: 12px 22px; border-radius: 99px; font-family: var(--display); font-weight: 900; font-size: clamp(18px, 4vw, 26px); white-space: nowrap; background: rgba(10,12,20,.82); border: 1px solid var(--accent); box-shadow: 0 0 30px var(--glow); animation: mile 2.2s ease forwards; pointer-events: none; }
 @keyframes mile { 0% { opacity: 0; transform: translate(-50%, 20px) scale(.8); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } 80% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -20px); } }
 
+/* ---------- Desmos calculator split view (math questions only) ---------- */
+.calcbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; padding: 4px 11px 4px 8px; border-radius: 99px; border: 1px solid var(--accent); background: rgba(255, 255, 255, .06); color: var(--accent2); cursor: pointer; transition: background .2s, color .2s, transform .12s; }
+.calcbtn:active { transform: scale(.95); }
+.calcbtn[aria-pressed="true"] { background: var(--accent); color: #0a0c14; }
+/* phones: the calculator takes the bottom half and the question keeps the top half */
+.calc { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; height: 50vh; height: 50dvh; display: flex; flex-direction: column; background: #fff; border-top: 2px solid var(--accent); box-shadow: 0 -14px 44px rgba(0, 0, 0, .55); animation: calcUp .28s ease-out; }
+@keyframes calcUp { from { transform: translateY(40px); opacity: 0; } }
+@keyframes calcSide { from { transform: translateX(-40px); opacity: 0; } }
+.calchead { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; background: #0d1020; color: #fff; font-size: 13px; font-weight: 700; }
+.calchead span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calchead a, .calchead button { font: inherit; font-size: 12px; font-weight: 700; color: #cfd6f5; background: rgba(255, 255, 255, .09); border: 0; border-radius: 8px; padding: 7px 10px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.calchead button.x { padding: 5px 9px; font-size: 16px; line-height: 1; }
+.calcbody { flex: 1; min-height: 0; position: relative; background: #fff; }
+.calcbody iframe, .calcbody .calcmount { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.calcnote { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; color: #5b6170; font-size: 14px; }
+body.calc-open #app { padding-bottom: calc(50vh + 20px); padding-bottom: calc(50dvh + 20px); }
+/* wide screens: calculator on the left half, question on the right half */
+body.calc-side .calc { right: auto; top: 0; height: auto; width: 50vw; border-top: 0; border-right: 2px solid var(--accent); box-shadow: 14px 0 44px rgba(0, 0, 0, .55); animation-name: calcSide; }
+body.calc-side #app { margin-left: 50vw; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+body.calc-side .answers { grid-template-columns: 1fr; }
+/* when room is tight, shrink the streak header so the question stays in view */
+body.calc-compact .counter { font-size: 46px; }
+body.calc-compact .counterlabel, body.calc-compact .halo, body.calc-compact .plabel { display: none; }
+body.calc-compact .counterwrap { margin: 0; }
+body.calc-compact .progress { margin: 4px auto 10px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .tierup { animation-duration: 2.1s !important; }
@@ -385,6 +411,17 @@ body.shake-hard #app { animation: shakeHard .5s; }
   </section>
 </div>
 
+<!-- DESMOS CALCULATOR (opens beside math questions) -->
+<aside id="calc" class="calc hidden" aria-label="Desmos graphing calculator">
+  <div class="calchead">
+    <span>Desmos Graphing Calculator</span>
+    <button id="calc-reset" type="button">Reset</button>
+    <a id="calc-link" href="https://www.desmos.com/calculator" target="_blank" rel="noopener noreferrer">New tab</a>
+    <button id="calc-close" class="x" type="button" aria-label="Close calculator">&times;</button>
+  </div>
+  <div class="calcbody" id="calc-body"><div class="calcnote" id="calc-note">Loading Desmos…<br>If it stays blank, use “New tab”.</div></div>
+</aside>
+
 <script>
 /* =====================================================================
    1. YOUR OWN QUESTIONS (optional)
@@ -448,6 +485,13 @@ const TIERS = [
     effects: [{ type: "aura" }, { type: "godrays" }, { type: "stars", count: 200, speed: 0.25 }, { type: "confetti", count: 46 }, { type: "fireworks" }],
     ui: { burst: true, glowBorder: true, fireCounter: true }, difficulty: [0.05, 0.25, 0.7] },
 ];
+
+/* The Desmos calculator that can open beside math questions.
+   With no key, the Desmos website is shown in a frame (nothing to set up).
+   If you get your own free key at https://www.desmos.com/my-api and paste it
+   here, the calculator is built into the page instead. */
+const DESMOS_API_KEY = "";
+const DESMOS_URL = "https://www.desmos.com/calculator";
 
 /* Messages that pop up when you reach these streaks. */
 const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Absolutely locked in! 🌌", 50: "LEGENDARY! 👑", 100: "SAT GOD MODE 🏆" };
@@ -1345,7 +1389,70 @@ const Game = {
    7. UI
    ===================================================================== */
 const $ = (id) => document.getElementById(id);
+/* The split view: Desmos on one half of the screen, the question on the other.
+   It only shows while a math question is up, and it remembers that you want it. */
+const Calc = {
+  wanted: false, built: false, api: null,
+  isMath(q) { return !!q && q.section === "Math"; },
+  toggle() {
+    this.wanted = !this.wanted;
+    this.sync();
+    if (this.wanted) window.scrollTo(0, 0);
+  },
+  sync() {
+    const onGame = !$("screen-game").classList.contains("hidden");
+    const open = this.wanted && onGame && this.isMath(Game.current);
+    if (open && !this.built) this.build();
+    $("calc").classList.toggle("hidden", !open);
+    document.body.classList.toggle("calc-open", open);
+    this.layout();
+    const b = $("btn-calc");
+    if (b) b.setAttribute("aria-pressed", String(open));
+    if (open && this.api) this.api.resize();
+  },
+  // Side by side when the screen is wide, stacked when it is tall and narrow.
+  layout() {
+    const open = document.body.classList.contains("calc-open");
+    const side = innerWidth >= 820 || (innerWidth > innerHeight && innerWidth >= 600);
+    document.body.classList.toggle("calc-side", open && side);
+    document.body.classList.toggle("calc-compact", open && (!side || innerHeight < 640));
+  },
+  build() {
+    this.built = true;
+    if (!DESMOS_API_KEY) { this.frame(); return; }
+    const s = document.createElement("script");
+    s.src = "https://www.desmos.com/api/v1.11/calculator.js?apiKey=" + encodeURIComponent(DESMOS_API_KEY);
+    s.onload = () => {
+      try {
+        const mount = document.createElement("div");
+        mount.className = "calcmount";
+        $("calc-body").appendChild(mount);
+        this.api = window.Desmos.GraphingCalculator(mount, { keypad: true, expressions: true });
+        $("calc-note").classList.add("hidden");
+      } catch (e) { this.frame(); }
+    };
+    s.onerror = () => this.frame();
+    document.head.appendChild(s);
+  },
+  frame() {
+    const old = $("calc-body").querySelector(".calcmount"); if (old) old.remove();
+    const f = document.createElement("iframe");
+    f.src = DESMOS_URL;
+    f.title = "Desmos graphing calculator";
+    f.referrerPolicy = "no-referrer";
+    f.setAttribute("allow", "clipboard-write");
+    f.onload = () => $("calc-note").classList.add("hidden");
+    $("calc-body").appendChild(f);
+  },
+  reset() {
+    if (this.api) { this.api.setBlank(); return; }
+    const f = $("calc-body").querySelector("iframe");
+    if (f) f.src = DESMOS_URL;
+  },
+};
+
 const ICONS = {
+  graph: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c3 0 3-10 6-10s3 7 7 7"/></svg>',
   soundOn: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M16.5 8.5a5 5 0 010 7M19.2 6a8.5 8.5 0 010 12"/></svg>',
   soundOff: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg>',
 };
@@ -1353,6 +1460,7 @@ const UI = {
   show(name) {
     for (const s of ["start", "game", "over"]) $("screen-" + s).classList.toggle("hidden", s !== name);
     if (name === "start") this.renderStart();
+    Calc.sync(); // the calculator only belongs to the game screen
     window.scrollTo(0, 0);
   },
 
@@ -1455,6 +1563,7 @@ const UI = {
 
   noQuestion() {
     this.clearCard();
+    Calc.sync();
     $("question").innerHTML = '<div class="loadingq">Couldn\'t load a question from College Board. Your streak is safe.<br><br><button class="bigbtn" id="btn-retry" style="max-width:320px;margin:0 auto">Try again</button></div>';
     $("btn-retry").onclick = () => Game.next();
   },
@@ -1473,6 +1582,15 @@ const UI = {
       const span = document.createElement("span"); span.className = "chip " + cls; span.textContent = txt; $("qmeta").appendChild(span);
     }
     if (q.source) { const span = document.createElement("span"); span.className = "chip"; span.textContent = q.source; $("qmeta").appendChild(span); }
+    if (Calc.isMath(q)) { // math questions get a button that opens Desmos beside the question
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "calcbtn"; b.id = "btn-calc";
+      b.setAttribute("aria-label", "Open or close the Desmos graphing calculator");
+      b.innerHTML = ICONS.graph + "<span>Desmos</span>";
+      b.onclick = () => { Sound.tap(); Calc.toggle(); };
+      $("qmeta").appendChild(b);
+    }
+    Calc.sync();
     this.put($("passage"), q.passage || "", q.html);
     $("passage").classList.toggle("hidden", !q.passage);
     this.put($("question"), q.question, q.html);
@@ -1614,8 +1732,13 @@ $("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true;
 
 function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.best; Game.start(); }
 
+$("calc-close").onclick = () => { Calc.wanted = false; Calc.sync(); };
+$("calc-reset").onclick = () => Calc.reset();
+window.addEventListener("resize", () => Calc.layout());
+
 document.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target && e.target.closest && e.target.closest("#calc")) return; // typing in the calculator is not an answer
   const game = !$("screen-game").classList.contains("hidden");
   const over = !$("screen-over").classList.contains("hidden");
   const start = !$("screen-start").classList.contains("hidden");

@@ -59,6 +59,19 @@ there is used only when College Board can't be reached:
 `section` must be exactly `"Math"` or `"Reading & Writing"`, and `difficulty`
 is 1 (easy), 2 (medium) or 3 (hard).
 
+## The Desmos calculator
+
+Math questions show a **Desmos** button. It splits the screen: the Desmos
+graphing calculator on one half and the question on the other (side by side on
+a laptop, stacked on a phone). It stays out of the way on Reading & Writing
+questions and comes back on the next math question.
+
+Out of the box the panel shows the Desmos website in a frame, so there is
+nothing to set up. If you would rather have the calculator built into the page,
+get a key from <https://www.desmos.com/my-api> and paste it into
+`DESMOS_API_KEY` near the top of the script in `index.html`. Desmos is a
+separate product; this project is not affiliated with it.
+
 ## Add or change tiers
 
 Find `const TIERS = [` in the script. Each tier is one object:
