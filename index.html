@@ -225,6 +225,11 @@ body.shake-hard #app { animation: shakeHard .5s; }
 @keyframes shakeHard { 0%,100% { transform: none; } 10% { transform: translate(-12px, 5px) rotate(-.6deg); } 25% { transform: translate(11px, -6px) rotate(.5deg); } 40% { transform: translate(-9px, 6px) rotate(-.4deg); } 55% { transform: translate(7px, -4px); } 70% { transform: translate(-5px, 3px); } 85% { transform: translate(3px, -1px); } }
 
 /* College Board questions arrive as HTML (tables, figures, math) */
+/* Text meant only for screen readers (College Board marks each blank with a hidden word "blank"). */
+.sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.rich .blank { letter-spacing: -.02em; white-space: nowrap; }
+.rich math { font-size: 1.08em; }
+.review .qid { color: var(--muted); font-size: 11px; opacity: .7; margin: 8px 0 0; user-select: all; }
 .rich p { margin: 0 0 .6em; } .rich p:last-child { margin-bottom: 0; }
 .rich img, .rich svg { max-width: 100%; height: auto; background: #fff; border-radius: 6px; }
 .rich table { border-collapse: collapse; background: #fff; color: #111; margin: 6px 0; font-size: 15px; }
@@ -405,6 +410,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div class="q" id="over-q"></div>
       <p class="ans" id="over-ans"></p>
       <div class="exp" id="over-exp"></div>
+      <p class="qid" id="over-id"></p>
     </div>
     <button class="bigbtn" id="btn-again">Start new streak</button>
     <button class="ghostbtn" id="btn-menu">Back to start</button>
@@ -604,28 +610,51 @@ const CB = {
     return list[Math.floor(Math.random() * list.length)];
   },
 
+  // The letter the explanation calls correct ("Choice B is the best answer"), or "" if it
+  // doesn't say so in exactly one way.
+  keyFromRationale(html) {
+    const text = String(html || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+    const found = new Set(), re = /Choice\s+([A-D])\s+is\s+(?:the\s+)?(?:best|correct)/gi;
+    for (let m; (m = re.exec(text)); ) found.add(m[1].toUpperCase());
+    return found.size === 1 ? [...found][0] : "";
+  },
+
   // Turn College Board's reply into the game's question format (or null to skip it).
+  // A question is only used when everything that says which choice is right agrees:
+  // the answer letter, the answer id, and the explanation. Anything unclear is skipped.
   normalize(meta, raw) {
     let passage, question, choices, answer, explanation;
     if (meta.externalId) {
       if (String(raw.type || "").toLowerCase() !== "mcq") return null; // typed-answer question
       const opts = Array.isArray(raw.answerOptions) ? raw.answerOptions : [];
-      const correct = Array.isArray(raw.correct_answer) ? raw.correct_answer[0] : raw.correct_answer;
+      const correct = Array.isArray(raw.correct_answer) ? raw.correct_answer : [raw.correct_answer];
+      if (correct.length !== 1) return null;                           // no single right answer
       passage = raw.stimulus; question = raw.stem; explanation = raw.rationale;
-      choices = opts.map((o) => o.content); answer = String(correct || "").trim().toUpperCase();
+      choices = opts.map((o) => (o && o.content) || ""); answer = String(correct[0] || "").trim().toUpperCase();
+      // The reply also names the right choice by id. If that points at a different choice, skip.
+      const keys = Array.isArray(raw.keys) ? raw.keys.map(String) : [];
+      const byId = opts.findIndex((o) => o && o.id != null && keys.includes(String(o.id)));
+      if (byId >= 0 && "ABCD"[byId] !== answer) return null;
     } else {
       const item = Array.isArray(raw) ? raw[0] : raw;
       const ans = (item && item.answer) || {};
-      const entries = ans.choices && typeof ans.choices === "object" ? Object.entries(ans.choices) : [];
+      const ch = ans.choices && typeof ans.choices === "object" ? ans.choices : {};
+      const pick = (k) => { const v = ch[k] !== undefined ? ch[k] : ch[k.toUpperCase()]; return typeof v === "string" ? v : (v && v.body) || ""; };
       passage = item && item.body; question = item && item.prompt; explanation = ans.rationale;
-      choices = entries.map(([, v]) => (v && v.body) || ""); answer = String(ans.correct_choice || "").trim().toUpperCase();
+      // Choices are looked up by their letter, never by the order they happen to arrive in.
+      choices = Object.keys(ch).length === 4 ? ["a", "b", "c", "d"].map(pick) : [];
+      answer = String(ans.correct_choice || "").trim().toUpperCase();
     }
     // The game has four answer buttons, so anything else is skipped.
     if (!question || choices.length !== 4 || answer.length !== 1 || !"ABCD".includes(answer)) return null;
+    const said = this.keyFromRationale(explanation);
+    if (said && said !== answer) return null;                          // explanation disagrees with the key
+    const clean = choices.map(sanitize);
+    if (clean.some((c) => !hasContent(c))) return null;                // a choice came through empty
     return {
-      id: "cb-" + meta.questionId, html: true, source: "College Board",
+      id: "cb-" + meta.questionId, ref: String(meta.questionId), html: true, source: "College Board",
       section: meta.section, topic: meta.topic, difficulty: this.DIFF[meta.difficulty] || 2,
-      passage: sanitize(passage), question: sanitize(question), choices: choices.map(sanitize), answer,
+      passage: sanitize(passage), question: sanitize(question), choices: clean, answer,
       explanation: sanitize(explanation),
     };
   },
@@ -657,7 +686,8 @@ const CB = {
   },
 };
 
-/* Removes anything active (scripts, event handlers) from fetched HTML. */
+/* Removes anything active (scripts, event handlers) from fetched HTML, then
+   tidies it so it reads the way College Board's own site shows it. */
 function sanitize(html) {
   const doc = new DOMParser().parseFromString("<div>" + (html || "") + "</div>", "text/html");
   const root = doc.body.firstElementChild;
@@ -672,7 +702,105 @@ function sanitize(html) {
       walk(child);
     }
   })(root);
+  tidy(root, doc);
   return root.innerHTML.trim();
+}
+
+/* Display fixes for fetched question HTML:
+   1. Text written only for screen readers (such as the word "blank" after each
+      ______) is kept for screen readers but no longer shown.
+   2. <mfenced>, an old way of writing brackets in math, is not drawn by current
+      browsers, which made brackets vanish: (x + 2)(x - 3) showed as x + 2x - 3.
+      It is rewritten into brackets every browser draws. */
+const SR_CLASS = /(^|[\s_-])(sr-only|sronly|visually-?hidden|screen-?reader\S*|offscreen|a11y-hidden)([\s_-]|$)/i;
+function tidy(root, doc) {
+  const isBlankWord = (el) => /^\s*blank\s*$/i.test(el.textContent);
+  // Is there already a visible blank (underscores, or something hidden from screen readers) right before el?
+  const lineBefore = (el) => {
+    let n = el.previousSibling;
+    while (n && n.nodeType === 3 && !n.nodeValue.trim()) n = n.previousSibling;
+    if (!n) return false;
+    return /_{3,}\s*$/.test(n.textContent) || (n.nodeType === 1 && n.getAttribute("aria-hidden") === "true");
+  };
+  for (const el of Array.from(root.querySelectorAll("[class]"))) {
+    if (!SR_CLASS.test(el.getAttribute("class"))) continue;
+    el.setAttribute("class", "sr-only");
+    if (isBlankWord(el) && !lineBefore(el)) { // the hidden word was the only sign of the blank: draw one
+      const line = doc.createElement("span");
+      line.className = "blank"; line.setAttribute("aria-hidden", "true"); line.textContent = "______";
+      el.before(line);
+    }
+  }
+  // The same word without a recognizable class: hide it when it directly follows a blank.
+  for (const el of Array.from(root.querySelectorAll("span, em, i, b, strong, u, small"))) {
+    if (!el.children.length && isBlankWord(el) && lineBefore(el)) el.setAttribute("class", "sr-only");
+  }
+  // ...and when it is plain text glued to the underscores.
+  const walker = doc.createTreeWalker(root, 4 /* text nodes */);
+  for (let n; (n = walker.nextNode()); ) {
+    if (/_{3,}\s*blank\b/i.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/(_{3,})\s*blank\b/gi, "$1");
+  }
+  // Brackets in math.
+  const M = "http://www.w3.org/1998/Math/MathML";
+  const mo = (t) => { const o = doc.createElementNS(M, "mo"); o.textContent = t; return o; };
+  for (const f of Array.from(root.querySelectorAll("mfenced"))) {
+    const attr = (name, fallback) => (f.hasAttribute(name) ? f.getAttribute(name) : fallback);
+    const open = attr("open", "("), close = attr("close", ")"), seps = attr("separators", ",").replace(/\s+/g, "");
+    const row = doc.createElementNS(M, "mrow");
+    if (open) row.appendChild(mo(open));
+    Array.from(f.children).forEach((kid, i) => {
+      if (i && seps) row.appendChild(mo(seps[Math.min(i - 1, seps.length - 1)]));
+      row.appendChild(kid);
+    });
+    if (close) row.appendChild(mo(close));
+    f.replaceWith(row);
+  }
+}
+
+/* True if a piece of question HTML would actually show something. */
+function hasContent(html) {
+  return /<(img|svg|math|table)\b/i.test(html) || html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
+}
+
+/* Self-check: open index.html?selftest to run made-up sample replies (no College
+   Board content) through the code above and see whether each comes out right. */
+function selfTest() {
+  const meta = { questionId: "t1", externalId: "x1", section: "Math", topic: "", difficulty: "M" };
+  const old = { questionId: "t2", ibn: "i1", section: "Math", topic: "", difficulty: "E" };
+  const opts = (texts) => texts.map((t, i) => ({ id: "id" + i, content: "<p>" + t + "</p>" }));
+  const mcq = (over) => Object.assign({ type: "mcq", stem: "<p>Pick one.</p>", stimulus: "", answerOptions: opts(["w", "x", "y", "z"]), correct_answer: ["C"], keys: ["id2"], rationale: "<p>Choice C is the best answer.</p><p>Choice A is incorrect.</p>" }, over);
+  const disclosed = (over) => [{ prompt: "<p>Pick one.</p>", body: "", answer: Object.assign({ choices: { d: { body: "<p>z</p>" }, a: { body: "<p>w</p>" }, c: { body: "<p>y</p>" }, b: { body: "<p>x</p>" } }, correct_choice: "b", rationale: "<p>Choice B is correct.</p>" }, over) }];
+  const text = (html) => { const d = document.createElement("div"); d.innerHTML = html; d.querySelectorAll(".sr-only").forEach((e) => e.remove()); return d.textContent.replace(/\s+/g, " ").trim(); };
+  const n = (m, raw) => CB.normalize(m, raw);
+  const checks = [
+    ["blank: hidden word after underscores is not shown", text(sanitize('<p>The plan was <span aria-hidden="true">______</span><span class="sr-only">blank</span> by all.</p>')) === "The plan was ______ by all."],
+    ["blank: hidden word alone still draws a line", text(sanitize('<p>It was <span class="sr-only">blank</span> then.</p>')) === "It was ______ then."],
+    ["blank: bare word after underscores is not shown", text(sanitize("<p>It was ______<span>blank</span> then.</p>")) === "It was ______ then."],
+    ["blank: plain text ______blank loses the word", text(sanitize("<p>It was ______ blank then.</p>")) === "It was ______ then."],
+    ["blank: the ordinary word blank is left alone", text(sanitize("<p>She left the page blank.</p>")) === "She left the page blank."],
+    ["math: brackets are kept", text(sanitize("<math><mfenced><mrow><mi>x</mi><mo>+</mo><mn>2</mn></mrow></mfenced><mfenced><mn>3</mn><mn>4</mn></mfenced></math>")) === "(x+2)(3,4)"],
+    ["math: custom brackets are kept", text(sanitize('<math><mfenced open="[" close="]" separators=";"><mn>1</mn><mn>2</mn></mfenced></math>')) === "[1;2]"],
+    ["safety: scripts and handlers are removed", !/script|onerror/i.test(sanitize('<p>a<script>x()<\/script><img src="a.png" onerror="x()"></p>'))],
+    ["answer: letter, id and explanation agree", (n(meta, mcq({})) || {}).answer === "C"],
+    ["answer: id points at another choice, skipped", n(meta, mcq({ keys: ["id0"] })) === null],
+    ["answer: explanation names another choice, skipped", n(meta, mcq({ rationale: "<p>Choice A is the best answer.</p>" })) === null],
+    ["answer: explanation names no choice, letter is used", (n(meta, mcq({ rationale: "<p>Because of the slope.</p>" })) || {}).answer === "C"],
+    ["answer: two right answers listed, skipped", n(meta, mcq({ correct_answer: ["A", "C"] })) === null],
+    ["answer: no answer given, skipped", n(meta, mcq({ correct_answer: [] })) === null],
+    ["answer: typed-answer question, skipped", n(meta, mcq({ type: "spr", correct_answer: ["7"] })) === null],
+    ["answer: an empty choice, skipped", n(meta, mcq({ answerOptions: opts(["w", "", "y", "z"]) })) === null],
+    ["answer: three choices, skipped", n(meta, mcq({ answerOptions: opts(["w", "x", "y"]) })) === null],
+    ["older format: choices are placed by letter, not arrival order", (() => { const q = n(old, disclosed({})); return !!q && q.answer === "B" && q.choices.map(text).join("") === "wxyz"; })()],
+    ["older format: no answer key, skipped", n(old, disclosed({ correct_choice: "" })) === null],
+    ["older format: explanation disagrees, skipped", n(old, disclosed({ rationale: "<p>Choice D is correct.</p>" })) === null],
+  ];
+  const failed = checks.filter(([, ok]) => !ok);
+  const box = document.createElement("pre");
+  box.id = "selftest";
+  box.style.cssText = "position:fixed;inset:0;z-index:99;margin:0;padding:20px;overflow:auto;background:#0b0d16;color:#e8ecff;font:14px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap";
+  box.textContent = (failed.length ? failed.length + " of " + checks.length + " checks FAILED" : "All " + checks.length + " checks passed") + "\n\n" + checks.map(([name, ok]) => (ok ? "ok    " : "FAIL  ") + name).join("\n");
+  document.body.appendChild(box);
+  return { total: checks.length, failed: failed.map(([name]) => name) };
 }
 
 /* =====================================================================
@@ -1709,6 +1837,7 @@ const UI = {
       if (q.html) $("over-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
       else $("over-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
       this.put($("over-exp"), q.explanation, q.html);
+      $("over-id").textContent = q.ref ? "Question " + q.ref : "";
     }, 250);
   },
 };
@@ -1749,6 +1878,8 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault(); startRun();
   }
 });
+
+if (/[?&]selftest\b/.test(location.search)) window.SELFTEST = selfTest();
 
 /* ---------- main loop ---------- */
 Visuals.setTier(0, true);

@@ -59,6 +59,23 @@ there is used only when College Board can't be reached:
 `section` must be exactly `"Math"` or `"Reading & Writing"`, and `difficulty`
 is 1 (easy), 2 (medium) or 3 (hard).
 
+## How questions are checked
+
+College Board's replies are cleaned up before they are shown:
+
+- Each blank arrives with a hidden word "blank" meant for screen readers. It
+  stays available to screen readers but is no longer printed after the line.
+- Brackets in math written the old `<mfenced>` way are not drawn by current
+  browsers, so `(x + 2)(x - 3)` used to show as `x + 2x - 3`. They are
+  rewritten so every browser draws them.
+- A question is only used when the answer letter, the answer id and the
+  explanation all point at the same choice. Anything unclear is skipped, as are
+  typed-answer questions and questions without exactly four choices.
+
+Open `index.html?selftest` to run 20 made-up sample replies through this code
+and see a pass or fail for each. The game-over card shows a question number, so
+a question that still looks wrong can be reported.
+
 ## The Desmos calculator
 
 Math questions show a **Desmos** button. It splits the screen: the Desmos
