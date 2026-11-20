@@ -74,8 +74,9 @@ Find `const TIERS = [` in the script. Each tier is one object:
   difficulty: [0.05, 0.25, 0.7] },                // easy / medium / hard odds
 ```
 
-Keep tiers in order of `min`. Available effect types: `float`, `embers`,
-`bubbles`, `waves`, `rays`, `rain`, `lightning`, `stars`, `nebula`, `shooting`,
-`pulse`, `aura`, `fireworks`. To invent a new effect, add an entry to the
+Keep tiers in order of `min`. Available effect types: `float`, `orbs`,
+`embers`, `heat`, `bubbles`, `waves`, `rays`, `school`, `rain`, `clouds`,
+`lightning`, `stars`, `nebula`, `planet`, `shooting`, `pulse`, `rings`, `aura`,
+`godrays`, `confetti`, `fireworks`. To invent a new effect, add an entry to the
 `EFFECTS` object with `init`, `update` and `draw` functions, then use its name
 in a tier. Milestone messages live in `MILESTONES` right below the tiers.
