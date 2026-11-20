@@ -22,13 +22,16 @@ the College Board
 [SAT Suite Question Bank](https://satsuitequestionbank.collegeboard.org/).
 There is no built-in question bank.
 
-- Questions never repeat within a streak.
+- A question you have been shown does not come back, in this streak or a
+  later one, until you have seen all the others. Your browser remembers the
+  ids of the questions you have seen (only the ids, never the questions).
 - College Board's Easy / Medium / Hard ratings follow the tiers: mostly easy
   at the start, mostly hard from Supernova on.
 - Only multiple-choice questions are used, since the game has four buttons.
   Answers stay in A–D order because the explanations refer to the letters.
-- The start screen shows "College Board connected" when it's working. You need
-  to be online.
+- The start screen says "Live from College Board" when it's working, with how
+  many questions the bank lists and how many you have seen. You need to be
+  online.
 
 **If the start screen says it couldn't reach College Board** while you are
 online, your browser is blocking the page from calling College Board directly.
@@ -98,9 +101,9 @@ itself and loads it.
 
 Math questions show a **Desmos** button. It splits the screen: the Desmos
 graphing calculator on one half and the question on the other (side by side on
-a laptop, stacked on a phone). It opens only when you tap the button. It stays
-open while math questions keep coming, and closes on a Reading & Writing
-question or when the run ends.
+a laptop, stacked on a phone). It opens when you tap the button, and after
+that it stays on: it steps aside on Reading & Writing questions and comes back
+on the next math question, until you close it with the ✕.
 
 Out of the box the panel shows the Desmos website in a frame, so there is
 nothing to set up. If you would rather have the calculator built into the page,

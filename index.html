@@ -282,6 +282,7 @@ body.shake-hard #app { animation: shakeHard .5s; }
 .tierup .goal { color: var(--accent2); font-size: 14px; font-weight: 700; letter-spacing: .08em; margin-top: 10px; animation: fadeUp .4s ease-out backwards .7s; }
 @keyframes tfade { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
 .milestone { position: fixed; left: 50%; top: 18%; z-index: 35; transform: translateX(-50%); padding: 12px 22px; border-radius: 99px; font-family: var(--display); font-weight: 900; font-size: clamp(18px, 4vw, 26px); white-space: nowrap; background: rgba(10,12,20,.82); border: 1px solid var(--accent); box-shadow: 0 0 30px var(--glow); animation: mile 2.2s ease forwards; pointer-events: none; }
+.milestone.note { white-space: normal; width: min(88vw, 400px); text-align: center; font-size: 15px; line-height: 1.35; border-radius: 18px; animation-duration: 3.6s; }
 @keyframes mile { 0% { opacity: 0; transform: translate(-50%, 20px) scale(.8); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } 80% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -20px); } }
 
 /* ---------- cross-out tool (answer choices) ---------- */
@@ -335,6 +336,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .tierup { animation-duration: 2.1s !important; }
   .milestone { animation-duration: 2.2s !important; }
+  .milestone.note { animation-duration: 3.6s !important; }
 }
 </style>
 </head>
@@ -367,6 +369,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
         <span>Source</span>
         <button class="ghostbtn hidden" id="btn-recheck" style="margin:0">Try again</button>
         <p class="srcnote" id="srcnote" style="flex-basis:100%;margin:0"></p>
+        <button class="ghostbtn hidden" id="btn-forget" style="margin:0;font-size:13px">Reset seen questions</button>
       </div>
       <div class="row">
         <span>Timer</span>
@@ -520,7 +523,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "8";
+const BUILD = "10";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -547,12 +550,41 @@ const Store = {
 };
 Store.load();
 
+/* Questions you have already been shown, remembered between visits so the same
+   one doesn't come back until you have been through all the others. Only the
+   question ids are kept, never the questions. `missed` holds the ones you got
+   wrong, which return first once you have seen everything. `skip` holds ids the
+   game can't use (for example typed-answer questions), so they aren't fetched again. */
+const SEEN_KEY = "satStreak.seen.v1";
+const Seen = {
+  ids: new Set(), missed: new Set(), skip: new Set(),
+  load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
+      this.ids = new Set(d.ids || []);
+      this.missed = new Set(d.missed || []);
+      if (d.build === BUILD) this.skip = new Set(d.skip || []); // a new version may read more questions: check them again
+    } catch (e) { /* private mode: remembered for this visit only */ }
+  },
+  save() {
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify({ build: BUILD, ids: [...this.ids], missed: [...this.missed], skip: [...this.skip] })); } catch (e) { /* ignore */ }
+  },
+  has(id) { return this.ids.has(String(id)) || this.skip.has(String(id)); },
+  add(id) { this.ids.add(String(id)); this.save(); },
+  unusable(id) { this.skip.add(String(id)); this.save(); },
+  answered(id, right) { if (right) this.missed.delete(String(id)); else this.missed.add(String(id)); this.save(); },
+  forget(ids) { for (const id of ids) { this.ids.delete(String(id)); this.missed.delete(String(id)); } this.save(); },
+  reset() { this.ids.clear(); this.missed.clear(); this.save(); },
+};
+Seen.load();
+
 /* =====================================================================
    3b. COLLEGE BOARD SOURCE (live)
    Questions come straight from the public JSON endpoints behind the College
    Board SAT Suite Question Bank (https://satsuitequestionbank.collegeboard.org/).
-   Nothing is stored: the list of question ids is loaded once per visit, and
-   each question is fetched when it's needed.
+   No question is stored: the list of question ids is loaded once per visit, and
+   each question is fetched when it's needed. The browser remembers only the ids
+   of questions you have been shown (see Seen above), so they don't repeat.
    College Board difficulty maps to the tiers: Easy = 1, Medium = 2, Hard = 3.
 
    The browser tries to reach College Board directly. If the browser blocks
@@ -573,6 +605,8 @@ const CB = {
   list: null,         // question metadata (ids, section, difficulty), no text
   error: "",
   queue: [],          // prefetched questions (promises)
+  notice: "",         // a short message for the player, shown with the next question
+  reviewing: false,   // true while the questions you missed are coming back
   reserved: new Set(),
   DIFF: { E: 1, M: 2, H: 3 },
 
@@ -602,6 +636,15 @@ const CB = {
       if (!Array.isArray(rows)) throw new Error("unexpected reply");
       for (const r of rows) all.push({ section: sec.name, questionId: r.questionId, externalId: r.external_id || null, ibn: r.ibn || null, difficulty: r.difficulty || "M", topic: r.skill_desc || r.primary_class_cd_desc || "" });
     }
+    // The same question must not be listed twice (under one id, or under two ids that fetch the same text).
+    const ids = new Set(), texts = new Set();
+    const once = all.filter((r) => {
+      const text = r.externalId || r.ibn || "id:" + r.questionId;
+      if (ids.has(r.questionId) || texts.has(text)) return false;
+      ids.add(r.questionId); texts.add(text);
+      return true;
+    });
+    all.length = 0; all.push(...once);
     if (!all.length) throw new Error("no questions returned");
     return all;
   },
@@ -626,10 +669,31 @@ const CB = {
 
   get ready() { return this.state === "ready"; },
 
-  // Choose a random unused question id, with difficulty weighted by the tier.
+  // How many questions the bank lists for each section, and how many of them you have been shown.
+  counts() {
+    const c = { rw: 0, math: 0, seen: 0 };
+    for (const r of this.list) { if (r.section === "Math") c.math++; else c.rw++; if (Seen.ids.has(String(r.questionId))) c.seen++; }
+    return c;
+  },
+
+  // Choose a random question id you haven't been shown, with difficulty weighted by the tier.
   pickMeta(tierIndex) {
     const sec = Store.data.section;
-    const pool = this.list.filter((r) => (sec === "mixed" || (sec === "math") === (r.section === "Math")) && !Game.used.has("cb-" + r.questionId) && !this.reserved.has(r.questionId));
+    const mine = this.list.filter((r) => sec === "mixed" || (sec === "math") === (r.section === "Math"));
+    const free = (r) => !Game.used.has("cb-" + r.questionId) && !this.reserved.has(r.questionId) && !Seen.skip.has(String(r.questionId));
+    let pool = mine.filter((r) => free(r) && !Seen.ids.has(String(r.questionId)));
+    if (!pool.length && mine.some((r) => Seen.ids.has(String(r.questionId)))) {
+      // You have been through every question here. The ones you got wrong come
+      // back first; after those, the whole set starts over.
+      pool = mine.filter((r) => free(r) && Seen.missed.has(String(r.questionId)));
+      if (pool.length) { if (!this.reviewing) this.notice = "You have seen every question. Here are the ones you missed."; this.reviewing = true; }
+      else {
+        Seen.forget(mine.map((r) => r.questionId));
+        this.reviewing = false;
+        this.notice = "You have seen every question. Starting the set over.";
+        pool = mine.filter(free);
+      }
+    }
     if (!pool.length) return null;
     const w = TIERS[tierIndex].difficulty;
     const avail = [1, 2, 3].filter((d) => pool.some((r) => this.DIFF[r.difficulty] === d));
@@ -699,7 +763,8 @@ const CB = {
         const raw = meta.externalId ? await this.request(u.question, { external_id: meta.externalId }, 12000, this.plain)
           : meta.ibn ? await this.request(u.disclosed(meta.ibn), null, 12000) : null;
         const q = raw && this.normalize(meta, raw);
-        if (q) return q;
+        if (q) { q.notice = this.notice; this.notice = ""; return q; } // the notice goes with the question it is about
+        Seen.unusable(meta.questionId); // answered, but not a question the game can use
       } catch (e) { /* try another question */ }
     }
     return null;
@@ -1477,6 +1542,8 @@ const Game = {
     if (!q) { this.current = null; this.locked = true; UI.noQuestion(); return; }
     this.current = q;
     this.used.add(this.current.id);
+    if (q.source === "College Board") Seen.add(q.ref); // shown: it won't come back on a later round
+    if (q.notice) UI.milestone(q.notice, true);
     // Built-in answers are shuffled. College Board ones keep A-D order because
     // their explanations refer to the choices by letter.
     this.order = this.current.html ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
@@ -1506,6 +1573,7 @@ const Game = {
 
   hit(displayIndex) {
     this.locked = true;
+    if (this.current.source === "College Board") Seen.answered(this.current.ref, true);
     clearInterval(this.timerId);
     this.streak++;
     UI.markRight(displayIndex);
@@ -1546,6 +1614,7 @@ const Game = {
   miss(displayIndex, timedOut) {
     if (this.locked) return;
     this.locked = true;
+    if (this.current.source === "College Board") Seen.answered(this.current.ref, false); // comes back first once everything has been seen
     clearInterval(this.timerId);
     const correctDisplay = this.order.indexOf("ABCD".indexOf(this.current.answer));
     UI.markWrong(displayIndex, correctDisplay);
@@ -1661,9 +1730,9 @@ const Highlighter = {
 };
 
 /* The split view: Desmos on one half of the screen, the question on the other.
-   It opens only when its button is tapped. It stays open while math questions
-   keep coming, and closes (without coming back by itself) on a Reading &
-   Writing question, when the run ends, or when you close it. */
+   It first opens when its button is tapped. After that it remembers that you
+   want it: it steps aside on Reading & Writing questions and comes back on the
+   next math question, until you close it. */
 const Calc = {
   wanted: false, built: false, api: null,
   isMath(q) { return !!q && q.section === "Math"; },
@@ -1675,7 +1744,6 @@ const Calc = {
   sync() {
     const onGame = !$("screen-game").classList.contains("hidden");
     const open = this.wanted && onGame && this.isMath(Game.current);
-    if (!open) this.wanted = false; // once it closes, only a tap on the button opens it again
     if (open && !this.built) this.build();
     $("calc").classList.toggle("hidden", !open);
     document.body.classList.toggle("calc-open", open);
@@ -1770,7 +1838,10 @@ const UI = {
     $("btn-start").style.opacity = canPlay ? 1 : 0.45;
     $("btn-start").textContent = CB.state === "checking" && !canPlay ? "Connecting…" : "Start streak";
     $("btn-recheck").classList.toggle("hidden", CB.state !== "failed");
-    if (CB.ready) note.innerHTML = `<b>College Board connected.</b> ${CB.list.length.toLocaleString()} questions in the bank, drawn at random.`;
+    if (CB.ready) {
+      const c = CB.counts();
+      note.innerHTML = `<b>Live from College Board.</b> Its bank lists ${c.rw.toLocaleString()} Reading &amp; Writing and ${c.math.toLocaleString()} Math questions, drawn at random. You have seen ${c.seen.toLocaleString()}. Nothing repeats until you have seen them all; then the ones you missed come back first.`;
+    }
     else if (CB.state === "checking") note.textContent = "Connecting to the College Board question bank…";
     else {
       let why;
@@ -1781,6 +1852,7 @@ const UI = {
       note.innerHTML = why + (QUESTIONS.length ? ` Using your own ${QUESTIONS.length} questions for now.` : "") + `<br><span style="opacity:.7">Details: ${CB.log.join(" · ")}</span>`;
     }
     $("credit").classList.toggle("hidden", !CB.ready);
+    $("btn-forget").classList.toggle("hidden", !(CB.ready && CB.counts().seen > 0));
     this.renderMute();
   },
 
@@ -1974,12 +2046,12 @@ const UI = {
     setTimeout(() => el.remove(), 2100);
   },
 
-  milestone(text) {
+  milestone(text, small) {
     const el = document.createElement("div");
-    el.className = "milestone";
+    el.className = "milestone" + (small ? " note" : "");
     el.textContent = text;
     document.body.appendChild(el);
-    setTimeout(() => el.remove(), 2200);
+    setTimeout(() => el.remove(), small ? 3600 : 2200);
   },
 
   // Counts a number up from 0, slowing down as it arrives.
@@ -2091,6 +2163,10 @@ function connect() {
   return p;
 }
 $("btn-recheck").onclick = connect;
+$("btn-forget").onclick = () => {
+  if (!confirm("Forget which questions you have seen? Any of them can come up again.")) return;
+  Seen.reset(); UI.renderStart();
+};
 connect();
 let last = performance.now();
 function loop(now) {
