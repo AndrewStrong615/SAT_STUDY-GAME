@@ -49,6 +49,7 @@
       this.onSprintDone = null;
       this._raf = null;
       this._last = 0;
+      this.cdT = null;
     }
 
     gain(car, correct) {
@@ -115,9 +116,26 @@
       cancelAnimationFrame(this._raf);
     }
 
+    /** Start lights: three reds, then green. Calls done() on GO. */
+    countdown(done) {
+      this.phase = 'countdown';
+      this.cdT = 0;
+      this.onGo = done;
+    }
+
     update(dt) {
       this.time += dt;
-      if (this.phase === 'move') {
+      const before = this.player.pos;
+      if (this.cdT != null && this.cdT < 4) this.cdT += dt;
+      if (this.phase === 'countdown') {
+        for (const c of this.cars) c.idle = Math.sin(this.time * 30 + c.lane) * 0.9;
+        if (this.cdT >= 2.6) {
+          this.phase = 'wait';
+          const cb = this.onGo;
+          this.onGo = null;
+          if (cb) cb();
+        }
+      } else if (this.phase === 'move') {
         this.segT = Math.min(1, this.segT + dt / SEG_TIME);
         const e = ease(this.segT);
         for (const c of this.cars) c.pos = c.from + (c.to - c.from) * e;
@@ -154,6 +172,10 @@
       }
       for (const p of this.particles) p.life -= dt * 2.2;
       this.particles = this.particles.filter((p) => p.life > 0);
+      // speedometer: idle around 40, real speed while moving
+      const v = dt > 0 ? (this.player.pos - before) / dt : 0;
+      const targetSpeed = 40 + v * 0.9 + (this.phase === 'countdown' ? Math.sin(this.time * 9) * 25 + 30 : 0);
+      this.speed = (this.speed || 0) + (targetSpeed - (this.speed || 0)) * Math.min(1, dt * 5);
       // camera follows the player, eased
       const target = this.player.pos * PX - (this.canvas.clientWidth || this.canvas.width) * 0.38;
       if (!this._camInit) { this.camX = target; this._camInit = true; }
@@ -235,6 +257,79 @@
       for (const c of this.cars) this.drawCar(c, c.pos * PX - cam + 40, this.laneY(c.lane) + (this.phase === 'wait' ? c.idle || 0 : 0), carScale);
       // minimap
       this.drawMinimap(W, top);
+      this.drawGauge(W, H);
+      if (this.cdT != null && this.cdT < 3.4) this.drawLights(W, H);
+    }
+
+    drawLights(W, H) {
+      const { ctx } = this;
+      const t = this.cdT;
+      const go = t >= 2.4;
+      const r = Math.min(22, H * 0.08);
+      const gap = r * 2.6;
+      const bx = W / 2 - gap - r - 14, by = H * 0.42 - r - 12;
+      ctx.globalAlpha = t > 3 ? Math.max(0, 1 - (t - 3) / 0.4) : 1;
+      ctx.fillStyle = '#0b0b0f';
+      roundRect(ctx, bx, by, gap * 2 + r * 2 + 28, r * 2 + 24, 12);
+      ctx.fill();
+      for (let i = 0; i < 3; i++) {
+        const lit = go || t >= 0.4 + i * 0.7;
+        ctx.beginPath();
+        ctx.arc(W / 2 + (i - 1) * gap, H * 0.42, r, 0, Math.PI * 2);
+        ctx.fillStyle = go ? '#22e06b' : lit ? '#ff2d2d' : '#2a1010';
+        if (lit) { ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 24; }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      if (go) {
+        ctx.font = `italic 900 ${Math.round(r * 2.2)}px "Russo One", system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#22e06b';
+        ctx.fillText('GO!', W / 2, H * 0.42 + r * 3.6);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    drawGauge(W, H) {
+      const { ctx } = this;
+      const R = Math.max(30, Math.min(52, H * 0.17));
+      const cx = W - R - 14, cy = H - R * 0.55 - 10;
+      const max = 320;
+      const v = Math.max(0, Math.min(max, this.speed || 0));
+      const a0 = Math.PI * 0.8, a1 = Math.PI * 2.2;
+      ctx.fillStyle = 'rgba(8,10,16,0.82)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, R + 8, Math.PI, 0);
+      ctx.lineTo(cx + R + 8, cy + R * 0.5);
+      ctx.lineTo(cx - R - 8, cy + R * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.lineWidth = Math.max(4, R * 0.14);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#2b2f3a';
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, a0, a1);
+      ctx.stroke();
+      const grad = ctx.createLinearGradient(cx - R, 0, cx + R, 0);
+      grad.addColorStop(0, '#facc15');
+      grad.addColorStop(1, '#ff2d2d');
+      ctx.strokeStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, a0, a0 + (a1 - a0) * (v / max));
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.font = `italic 900 ${Math.round(R * 0.5)}px "Russo One", system-ui, sans-serif`;
+      ctx.fillText(String(Math.round(v)), cx, cy + R * 0.12);
+      ctx.font = `700 ${Math.round(R * 0.2)}px system-ui, sans-serif`;
+      ctx.fillStyle = '#9aa4b8';
+      ctx.fillText('KM/H', cx, cy + R * 0.38);
+      // nitro pips: one per streak step
+      const n = Math.min(4, Math.max(0, this.player.streak - 1));
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = i < n ? '#38bdf8' : '#2b2f3a';
+        ctx.fillRect(cx - R + i * (R * 0.5) + 2, cy - R - 16, R * 0.42, 5);
+      }
     }
 
     drawCar(c, x, y, scale = 1) {
