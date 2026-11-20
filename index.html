@@ -1,0 +1,2257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080d">
+<title>SAT Streak</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b0e1a'/%3E%3Cpath d='M36 6 14 36h14l-4 22 26-32H35z' fill='%238ab4ff'/%3E%3C/svg%3E">
+<style>
+/* =====================================================================
+   STYLES
+   ===================================================================== */
+:root {
+  --accent: #8ab4ff;
+  --accent2: #c6d8ff;
+  --glow: rgba(138, 180, 255, 0.55);
+  --card: rgba(12, 14, 24, 0.6);
+  --card-line: rgba(255, 255, 255, 0.13);
+  --text: #f3f5fb;
+  --muted: #a9b1c6;
+  --good: #3ee08a;
+  --bad: #ff4d5e;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --spring: cubic-bezier(.2, 1.5, .4, 1);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: #07080d;
+  color: var(--text);
+  font: 17px/1.5 var(--font);
+  overflow-x: hidden;
+}
+canvas#bg, canvas#fx { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+canvas#bg { z-index: 0; }
+canvas#fx { z-index: 30; pointer-events: none; }
+/* soft dark edges so the cards always stand out from the background */
+body::before { content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(0, 0, 0, .5) 100%); }
+#flash { position: fixed; inset: 0; z-index: 32; pointer-events: none; opacity: 0; }
+#app { position: relative; z-index: 10; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: max(14px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); }
+button { font: inherit; color: inherit; }
+button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.hidden { display: none !important; }
+
+/* glass card used everywhere for readability */
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .02) 38%), var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 24px;
+  backdrop-filter: blur(16px) saturate(1.25);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 24px 60px rgba(0, 0, 0, .5);
+}
+/* Blurring a moving background every frame is slow on phones, so they get a solid card instead. */
+@media (hover: none), (max-width: 720px) {
+  .glass, .iconbtn, .tierpill { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .glass { --card: rgba(12, 14, 24, 0.86); }
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- top bar ---------- */
+.topbar { width: 100%; max-width: 760px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.iconbtn {
+  width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--card-line);
+  background: rgba(10, 12, 20, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: grid; place-items: center; cursor: pointer; transition: transform .12s, border-color .2s, background .2s;
+}
+@media (hover: hover) { .iconbtn:hover { border-color: var(--accent); background: rgba(255, 255, 255, .1); } }
+.iconbtn:active { transform: scale(.92); }
+.tierpill { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; padding: 8px 14px; border-radius: 999px; background: rgba(10, 12, 20, 0.6); border: 1px solid var(--card-line); color: var(--accent2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: color .6s, border-color .6s; }
+.tierpill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.tierpill.bump { animation: bump .5s var(--spring); }
+@keyframes bump { 40% { transform: scale(1.18); } }
+
+/* ---------- start screen ---------- */
+.start { width: 100%; max-width: 560px; margin-top: 5vh; text-align: center; }
+.start > * { animation: rise .55s cubic-bezier(.2, .9, .3, 1) backwards; }
+.start > :nth-child(1) { animation-delay: .02s; } .start > :nth-child(2) { animation-delay: .08s; }
+.start > :nth-child(3) { animation-delay: .14s; } .start > :nth-child(4) { animation-delay: .2s; }
+.start > :nth-child(5) { animation-delay: .26s; } .start > :nth-child(6) { animation-delay: .32s; }
+.start > :nth-child(n+7) { animation-delay: .38s; }
+.logo { font-family: var(--display); font-size: clamp(46px, 13vw, 88px); font-weight: 900; letter-spacing: -.02em; line-height: .95; margin: 0; text-shadow: 0 0 34px var(--glow); }
+.logo span { background: linear-gradient(100deg, var(--accent) 20%, #fff 40%, var(--accent2) 60%, var(--accent) 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 5s linear infinite; }
+@keyframes shimmer { from { background-position: 125% 0; } to { background-position: -125% 0; } }
+.tag { color: var(--muted); margin: 12px auto 20px; max-width: 420px; }
+.records { display: grid; grid-template-columns: auto auto; gap: 12px; margin-bottom: 14px; }
+.record { padding: 16px 10px; min-width: 0; }
+@media (max-width: 360px) { .record span { letter-spacing: .06em; font-size: 11px; } }
+.record b { display: block; font-family: var(--display); font-size: clamp(23px, 7.4vw, 36px); font-weight: 900; line-height: 1.1; }
+.record span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; white-space: nowrap; }
+
+/* the seven worlds, as a path */
+.path { display: flex; justify-content: space-between; position: relative; margin: 0 0 16px; padding: 14px 6px 10px; }
+.path::before { content: ""; position: absolute; left: 9%; right: 9%; top: 23px; height: 2px; background: rgba(255, 255, 255, .14); }
+.node { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; position: relative; color: var(--muted); }
+.node i { width: 20px; height: 20px; border-radius: 50%; background: #171b2b; border: 2px solid rgba(255, 255, 255, .22); display: block; transition: background .4s, box-shadow .4s; }
+.node span { font-size: clamp(8px, 2.25vw, 11px); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
+.node em { font-style: normal; font-size: 11px; opacity: .7; margin-top: -4px; }
+.node.on { color: #fff; }
+/* narrow screens: let long names (Supernova, Legendary) take the room they need */
+@media (max-width: 520px) { .path { padding-left: 0; padding-right: 0; } .node { flex: 1 1 auto; min-width: auto; } .node span { font-size: clamp(7.5px, 2.1vw, 10px); letter-spacing: 0; padding: 0 1px; } .path::before { left: 16px; right: 28px; } }
+.node.on i { background: var(--c); border-color: #fff; box-shadow: 0 0 14px var(--c); }
+.node.now i { animation: nodePulse 1.5s ease-in-out infinite; }
+@keyframes nodePulse { 50% { box-shadow: 0 0 0 6px rgba(255, 255, 255, .12), 0 0 22px var(--c); } }
+
+.settings { padding: 18px; text-align: left; }
+.settings h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); margin: 0 0 10px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; flex-wrap: wrap; }
+.row + .row { border-top: 1px solid var(--card-line); }
+.seg { display: inline-flex; background: rgba(255,255,255,.07); border-radius: 12px; padding: 4px; gap: 4px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 8px 12px; border-radius: 9px; cursor: pointer; color: var(--muted); font-weight: 600; font-size: 15px; transition: background .2s, color .2s, transform .12s; }
+.seg button:active { transform: scale(.95); }
+.seg button.on { background: var(--accent); color: #0a0c14; box-shadow: 0 2px 12px var(--glow); }
+.switch { position: relative; width: 52px; height: 30px; border-radius: 99px; background: rgba(255,255,255,.14); border: 0; cursor: pointer; flex: none; transition: background .25s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .25s var(--spring); box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
+.switch.on { background: var(--accent); }
+.switch.on::after { transform: translateX(22px); }
+.bigbtn {
+  position: relative; overflow: hidden;
+  display: block; width: 100%; margin-top: 18px; padding: 18px 20px; border: 0; border-radius: 18px; cursor: pointer;
+  font-family: var(--display); font-size: 20px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; color: #0a0c14;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  box-shadow: 0 10px 30px var(--glow), inset 0 1px 0 rgba(255, 255, 255, .5); transition: transform .14s, box-shadow .2s, opacity .3s;
+}
+.bigbtn::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .6), transparent); transform: translateX(-180%) skewX(-18deg); animation: shine 3.4s ease-in-out infinite; }
+@keyframes shine { 0%, 55% { transform: translateX(-180%) skewX(-18deg); } 100% { transform: translateX(380%) skewX(-18deg); } }
+@media (hover: hover) { .bigbtn:hover { transform: translateY(-2px); box-shadow: 0 16px 44px var(--glow), inset 0 1px 0 rgba(255, 255, 255, .5); } }
+.bigbtn:active { transform: translateY(1px) scale(.985); }
+.bigbtn:disabled { cursor: default; }
+.bigbtn:disabled::after { animation: none; }
+.ghostbtn { display: inline-block; margin-top: 12px; background: none; border: 0; color: var(--muted); cursor: pointer; text-decoration: underline; }
+.ghostbtn:hover { color: #fff; }
+.howto { color: var(--muted); font-size: 14px; margin-top: 16px; }
+.kbd { display: inline-block; border: 1px solid var(--card-line); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; font-size: 13px; }
+
+/* ---------- game screen ---------- */
+.game { width: 100%; max-width: 760px; display: flex; flex-direction: column; align-items: center; }
+.counterwrap { position: relative; isolation: isolate; text-align: center; margin: 2px 0 4px; }
+.halo { position: absolute; z-index: -1; left: 50%; top: 44%; width: min(78vw, 380px); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, var(--glow) 0%, transparent 64%); opacity: .4; pointer-events: none; }
+.halo.hit { animation: haloHit .7s ease-out; }
+@keyframes haloHit { 0% { transform: translate(-50%, -50%) scale(.65); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: .4; } }
+.counter {
+  position: relative; font-family: var(--display);
+  font-size: clamp(68px, 19vw, 150px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums;
+  color: #fff; text-shadow: 0 0 18px var(--glow), 0 0 50px var(--glow);
+  display: inline-block;
+}
+.counter .num { display: inline-block; transform-origin: 50% 60%; }
+.counter .num.in { animation: numIn .45s var(--spring) both; }
+.counter .ghost { position: absolute; left: 0; right: 0; top: 0; animation: numOut .28s ease-in both; pointer-events: none; }
+@keyframes numIn { 0% { transform: translateY(42%) scale(.55); opacity: 0; } 55% { transform: translateY(-5%) scale(1.22) rotate(-3deg); opacity: 1; } 100% { transform: none; } }
+@keyframes numOut { to { transform: translateY(-55%) scale(.7); opacity: 0; } }
+.plus { position: absolute; left: 50%; top: 6%; font-family: var(--display); font-weight: 900; font-size: clamp(22px, 5vw, 32px); color: var(--accent2); text-shadow: 0 0 14px var(--glow); pointer-events: none; animation: plusUp .85s ease-out forwards; }
+@keyframes plusUp { 0% { transform: translateY(22px) scale(.5); opacity: 0; } 20% { transform: translateY(0) scale(1.15); opacity: 1; } 100% { transform: translateY(-44px) scale(1); opacity: 0; } }
+.counterlabel { text-shadow: 0 1px 8px rgba(0,0,0,.7); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; margin-top: -2px; }
+body.fire-counter .counter { color: #fff7d6; animation: fire 1.1s ease-in-out infinite alternate; }
+@keyframes fire {
+  0%   { text-shadow: 0 -4px 6px #fff2a8, 0 -12px 18px #ffcc33, 0 -24px 34px #ff7a1a, 0 -40px 60px #ff2d00; }
+  50%  { text-shadow: 0 -6px 8px #fff2a8, 0 -16px 22px #ffd23f, 0 -30px 40px #ff8c1a, 0 -52px 70px #ff3d00; }
+  100% { text-shadow: 0 -3px 5px #fff2a8, 0 -10px 16px #ffc21f, 0 -22px 30px #ff6a00, 0 -36px 54px #e52200; }
+}
+
+.progress { width: min(440px, 92%); margin: 10px auto 14px; }
+.ptrack { position: relative; height: 12px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5); }
+.pfill { position: relative; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 14px var(--glow); transition: width .55s var(--spring); overflow: hidden; }
+.pfill::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .65) 50%, transparent 70%); transform: translateX(-100%); animation: barShine 2.4s ease-in-out infinite; }
+@keyframes barShine { 0%, 40% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+/* one notch per question left in the tier */
+.pticks { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(100% / var(--seg, 5) - 2px), rgba(7, 8, 13, .7) calc(100% / var(--seg, 5) - 2px), rgba(7, 8, 13, .7) calc(100% / var(--seg, 5))); }
+.plabel { text-shadow: 0 1px 8px rgba(0,0,0,.7); display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; font-weight: 600; margin-top: 7px; }
+.plabel span:last-child { color: var(--accent2); }
+
+.card { width: 100%; padding: 22px; position: relative; transition: border-color .25s, box-shadow .25s, opacity .2s; }
+.card.correct { border-color: var(--good); box-shadow: 0 0 0 2px var(--good), 0 0 46px rgba(62, 224, 138, .35), 0 24px 60px rgba(0,0,0,.5); }
+.card.failed { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad), 0 0 46px rgba(255, 77, 94, .4), 0 24px 60px rgba(0,0,0,.5); }
+body.glow-border .card:not(.correct):not(.failed) { border-color: var(--accent); animation: borderglow 1.6s ease-in-out infinite; }
+@keyframes borderglow { 0%, 100% { box-shadow: 0 0 18px var(--glow), 0 24px 60px rgba(0,0,0,.5); } 50% { box-shadow: 0 0 40px var(--glow), 0 0 4px var(--accent2) inset, 0 24px 60px rgba(0,0,0,.5); } }
+.card.in .qmeta, .card.in .passage, .card.in .question { animation: fadeUp .34s ease-out backwards; }
+.card.in .passage { animation-delay: .04s; } .card.in .question { animation-delay: .08s; }
+.card.in .answer { animation: answerIn .38s cubic-bezier(.2, .9, .3, 1.25) backwards; animation-delay: calc(var(--i, 0) * 55ms + 110ms); }
+@keyframes answerIn { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+.qmeta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.chip { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,.08); color: var(--muted); }
+.chip.d1 { color: #9ff0c4; background: rgba(62, 224, 138, .12); } .chip.d2 { color: #ffe08a; background: rgba(255, 208, 80, .12); } .chip.d3 { color: #ffa3ad; background: rgba(255, 77, 94, .14); }
+.passage { background: rgba(255,255,255,.06); border-left: 3px solid var(--accent); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 16px; transition: border-color .6s; }
+.question { font-size: clamp(18px, 2.6vw, 21px); font-weight: 650; margin: 0 0 16px; }
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { .answers { grid-template-columns: 1fr; } }
+.answer {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 12px; text-align: left; min-height: 64px;
+  padding: 14px 16px; border-radius: 16px; border: 1px solid var(--card-line); cursor: pointer;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .05)); font-size: 17px;
+  transition: transform .14s, background .18s, border-color .18s, opacity .3s, box-shadow .2s;
+}
+@media (hover: hover) { .answer:hover { border-color: var(--accent); box-shadow: 0 6px 22px rgba(0, 0, 0, .35), 0 0 0 1px var(--accent); transform: translateY(-1px); } }
+.answer:active { transform: scale(.975); }
+.answer .k { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; background: rgba(255,255,255,.12); font-size: 15px; transition: background .2s, color .2s, transform .3s var(--spring); }
+@media (hover: hover) { .answer:hover .k { background: var(--accent); color: #0a0c14; } }
+.answer .t { min-width: 0; overflow-wrap: anywhere; }
+.answer:disabled { cursor: default; transform: none; }
+.answers.done .answer:not(.right):not(.wrong) { opacity: .38; box-shadow: none; border-color: var(--card-line); }
+.answer.right { background: linear-gradient(90deg, rgba(62, 224, 138, .36), rgba(62, 224, 138, .14)); border-color: var(--good); box-shadow: 0 0 0 1px var(--good), 0 0 26px rgba(62, 224, 138, .45); animation: rightPop .45s var(--spring); }
+.answer.right .k { background: var(--good); color: #062612; font-size: 0; transform: scale(1.1); }
+.answer.right .k::after { content: "✓"; font-size: 18px; }
+.answer.right::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 34px 50%, rgba(255, 255, 255, .55), transparent 60%); animation: ripple .6s ease-out forwards; pointer-events: none; }
+@keyframes rightPop { 0% { transform: scale(.97); } 45% { transform: scale(1.035); } 100% { transform: none; } }
+@keyframes ripple { from { opacity: .9; transform: scale(.2); } to { opacity: 0; transform: scale(2.4); } }
+.answer.wrong { background: linear-gradient(90deg, rgba(255, 77, 94, .36), rgba(255, 77, 94, .14)); border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad), 0 0 26px rgba(255, 77, 94, .45); animation: wrongShake .42s; }
+.answer.wrong .k { background: var(--bad); color: #fff; font-size: 0; }
+.answer.wrong .k::after { content: "✕"; font-size: 16px; }
+@keyframes wrongShake { 0%, 100% { transform: none; } 15% { transform: translateX(-9px); } 30% { transform: translateX(8px); } 45% { transform: translateX(-6px); } 60% { transform: translateX(5px); } 80% { transform: translateX(-2px); } }
+.timerbar { position: absolute; left: 22px; right: 22px; top: 10px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; }
+.timerbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transform-origin: left; transition: transform .1s linear; }
+.timerbar.low i { background: var(--bad); }
+.timerbar.low { animation: lowPulse .5s ease-in-out infinite alternate; }
+@keyframes lowPulse { to { box-shadow: 0 0 14px var(--bad); } }
+body.shake #app { animation: shake .35s; }
+body.shake-hard #app { animation: shakeHard .5s; }
+@keyframes shake { 0%,100% { transform: none; } 20% { transform: translate(-6px, 2px); } 40% { transform: translate(5px, -3px); } 60% { transform: translate(-4px, 3px); } 80% { transform: translate(3px, -1px); } }
+@keyframes shakeHard { 0%,100% { transform: none; } 10% { transform: translate(-12px, 5px) rotate(-.6deg); } 25% { transform: translate(11px, -6px) rotate(.5deg); } 40% { transform: translate(-9px, 6px) rotate(-.4deg); } 55% { transform: translate(7px, -4px); } 70% { transform: translate(-5px, 3px); } 85% { transform: translate(3px, -1px); } }
+
+/* College Board questions arrive as HTML (tables, figures, math) */
+/* Text meant only for screen readers (College Board marks each blank with a hidden word "blank"). */
+.sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.rich .blank { letter-spacing: -.02em; white-space: nowrap; }
+.rich math { font-size: 1.08em; }
+.review .qid { color: var(--muted); font-size: 11px; opacity: .7; margin: 8px 0 0; user-select: all; }
+.rich p { margin: 0 0 .6em; } .rich p:last-child { margin-bottom: 0; }
+.rich img, .rich svg { max-width: 100%; height: auto; background: #fff; border-radius: 6px; }
+.rich table { border-collapse: collapse; background: #fff; color: #111; margin: 6px 0; font-size: 15px; }
+.rich td, .rich th { border: 1px solid #999; padding: 4px 8px; }
+.rich ul, .rich ol { margin: .4em 0; padding-left: 1.3em; }
+.passage.rich { max-height: 38vh; overflow: auto; }
+.loadingq { color: var(--muted); text-align: center; padding: 30px 0; }
+/* placeholder shown while the next question loads */
+.skel i, .skel-a { display: block; border-radius: 10px; background: linear-gradient(100deg, rgba(255, 255, 255, .07) 30%, rgba(255, 255, 255, .17) 50%, rgba(255, 255, 255, .07) 70%); background-size: 220% 100%; animation: skel 1.1s linear infinite; }
+.skel i { height: 16px; margin: 0 0 12px; }
+.skel-a { height: 64px; border-radius: 16px; }
+@keyframes skel { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.srcnote { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+.srcnote b { color: var(--accent2); }
+.credit { color: var(--muted); font-size: 12px; margin: 14px 0 0; text-align: center; }
+
+/* ---------- game over ---------- */
+.over { width: 100%; max-width: 600px; padding: 26px 22px; text-align: center; margin-top: 4vh; animation: rise .5s ease-out backwards; animation-delay: .55s; }
+.over > * { animation: fadeUp .45s ease-out backwards; }
+.over > :nth-child(1) { animation-delay: .7s; } .over > :nth-child(2) { animation-delay: .78s; } .over > :nth-child(3) { animation-delay: .84s; }
+.over > :nth-child(4) { animation-delay: .9s; } .over > :nth-child(5) { animation-delay: .96s; } .over > :nth-child(6) { animation-delay: 1.02s; }
+.over > :nth-child(7) { animation-delay: 1.08s; } .over > :nth-child(n+8) { animation-delay: 1.14s; }
+.over h2 { margin: 0; font-size: 14px; letter-spacing: .32em; text-transform: uppercase; color: var(--bad); }
+.final { font-family: var(--display); font-size: clamp(76px, 21vw, 128px); font-weight: 900; line-height: 1; margin: 6px 0 0; font-variant-numeric: tabular-nums; text-shadow: 0 0 40px rgba(255, 255, 255, .25); }
+.finalsub { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; }
+.overmsg { color: var(--accent2); font-weight: 700; margin: 10px 0 0; min-height: 1.5em; }
+.newbest { display: inline-block; margin-top: 10px; padding: 5px 14px; border-radius: 99px; background: linear-gradient(90deg, #ffd23f, #ff8a00); color: #2a1600; font-weight: 900; letter-spacing: .1em; font-size: 13px; box-shadow: 0 0 24px rgba(255, 190, 40, .6); animation: fadeUp .45s ease-out backwards .9s, pulse 1s ease-in-out 1.4s infinite alternate; }
+@keyframes pulse { to { transform: scale(1.08); } }
+.statline { display: flex; justify-content: center; gap: 12px; margin: 14px 0 6px; }
+.statline > div { flex: 1; max-width: 190px; padding: 10px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); }
+.statline b { display: block; font-family: var(--display); font-size: 26px; line-height: 1.2; }
+.statline span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
+.over .path { margin: 4px 0 6px; }
+.review { text-align: left; background: rgba(255,255,255,.06); border-radius: 16px; padding: 14px 16px; margin-top: 8px; border-left: 3px solid var(--good); }
+.cardreview { margin-top: 16px; border-left-color: var(--bad); animation: fadeUp .35s ease-out backwards; }
+.cardreview .exp.rich { max-height: none; }
+.cardreview .back { margin: 12px 0 0; font-weight: 800; color: var(--accent2); }
+.cardreview .bigbtn { margin-top: 12px; }
+.num.drop { animation: numDrop .6s ease-out; }
+@keyframes numDrop { 0% { transform: translateY(-40%) scale(1.25); color: var(--bad); } 60% { transform: translateY(6%) scale(.94); color: var(--bad); } 100% { transform: none; } }
+.review h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.review .q { color: var(--muted); font-size: 15px; margin: 0 0 8px; }
+.review .ans { font-weight: 700; color: var(--good); margin: 0 0 6px; }
+.review .exp { margin: 0; font-size: 16px; }
+.review .exp.rich, .review .q.rich { max-height: 32vh; overflow: auto; }
+
+/* ---------- overlays ---------- */
+.tierup { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; text-align: center; overflow: hidden; background: radial-gradient(circle, rgba(4,6,14,.82), rgba(2,3,8,.93)); animation: tfade 2.1s ease forwards; cursor: pointer; }
+.tierup .rays { position: absolute; left: 50%; top: 50%; width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax; background: repeating-conic-gradient(var(--glow) 0deg 5deg, transparent 5deg 18deg); opacity: .35; animation: spin 16s linear infinite; -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 58%); mask-image: radial-gradient(circle, #000 0%, transparent 58%); }
+.tierup .inner { position: relative; padding: 0 12px; }
+.tierup .small { font-weight: 900; letter-spacing: .5em; text-indent: .5em; font-size: clamp(13px, 3vw, 19px); color: #fff; opacity: .9; animation: fadeUp .4s ease-out backwards; }
+.tierup .name { font-family: var(--display); font-size: clamp(50px, 15vw, 140px); font-weight: 900; line-height: 1.05; margin: 6px 0; filter: drop-shadow(0 0 26px var(--glow)); white-space: nowrap; }
+.tierup .name span { display: inline-block; background: linear-gradient(180deg, #fff 10%, var(--accent2) 50%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; animation: letterIn .6s var(--spring) backwards; animation-delay: calc(var(--i) * 45ms + 140ms); }
+@keyframes letterIn { from { opacity: 0; transform: translateY(45%) scale(.3) rotate(-10deg); } to { opacity: 1; transform: none; } }
+.tierup .sub { color: #fff; font-size: clamp(16px, 3vw, 22px); font-weight: 700; animation: fadeUp .4s ease-out backwards .55s; }
+.tierup .goal { color: var(--accent2); font-size: 14px; font-weight: 700; letter-spacing: .08em; margin-top: 10px; animation: fadeUp .4s ease-out backwards .7s; }
+@keyframes tfade { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.milestone { position: fixed; left: 50%; top: 18%; z-index: 35; transform: translateX(-50%); padding: 12px 22px; border-radius: 99px; font-family: var(--display); font-weight: 900; font-size: clamp(18px, 4vw, 26px); white-space: nowrap; background: rgba(10,12,20,.82); border: 1px solid var(--accent); box-shadow: 0 0 30px var(--glow); animation: mile 2.2s ease forwards; pointer-events: none; }
+.milestone.note { white-space: normal; width: min(88vw, 400px); text-align: center; font-size: 15px; line-height: 1.35; border-radius: 18px; animation-duration: 3.6s; }
+@keyframes mile { 0% { opacity: 0; transform: translate(-50%, 20px) scale(.8); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } 80% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -20px); } }
+
+/* ---------- cross-out tool (answer choices) ---------- */
+.calcbtn + .calcbtn { margin-left: 0; }
+.calcbtn s { text-decoration-thickness: 2px; }
+.answer .t { flex: 1; }
+.answer .strike { display: none; flex: none; align-items: center; justify-content: center; min-width: 46px; height: 36px; margin: -4px -6px -4px 0; padding: 0 8px; border-radius: 10px; border: 1px solid var(--card-line); background: rgba(10, 12, 20, .45); color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+.answer .strike s { text-decoration-thickness: 2px; }
+.answers.elim .answer:not(:disabled) .strike, .answer.out:not(:disabled) .strike { display: inline-flex; }
+@media (hover: hover) { .answer .strike:hover { color: #fff; border-color: var(--accent); } }
+/* a crossed-out choice: struck through and dimmed; tapping it only brings it back */
+.answer.out:not(.right):not(.wrong) { border-style: dashed; background: rgba(255, 255, 255, .03); box-shadow: none; transform: none; }
+.answer.out:not(.right):not(.wrong) .t { opacity: .42; text-decoration: line-through; text-decoration-thickness: 2px; }
+.answer.out:not(.right):not(.wrong) .k { opacity: .42; background: rgba(255, 255, 255, .12); color: inherit; }
+
+/* ---------- highlighter (passages and questions) ---------- */
+.passage, .question { -webkit-user-select: text; user-select: text; }
+.passage ::selection, .question ::selection { background: rgba(255, 224, 102, .45); }
+mark.hl { background: #ffe066; color: #14161f; border-radius: 3px; padding: 1px 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer; }
+mark.hl:hover { background: #ffd23f; }
+.hlbtn { position: fixed; z-index: 26; display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 14px; font-weight: 800; padding: 9px 14px; border-radius: 99px; border: 0; background: #ffe066; color: #14161f; box-shadow: 0 8px 26px rgba(0, 0, 0, .5); cursor: pointer; transform: translateX(-50%); animation: fadeUp .16s ease-out; }
+.hlbtn:active { transform: translateX(-50%) scale(.95); }
+
+/* ---------- Desmos calculator split view (math questions only) ---------- */
+.calcbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; padding: 4px 11px 4px 8px; border-radius: 99px; border: 1px solid var(--accent); background: rgba(255, 255, 255, .06); color: var(--accent2); cursor: pointer; transition: background .2s, color .2s, transform .12s; }
+.calcbtn:active { transform: scale(.95); }
+.calcbtn[aria-pressed="true"] { background: var(--accent); color: #0a0c14; }
+/* phones: the calculator takes the bottom half and the question keeps the top half */
+.calc { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; height: 50vh; height: 50dvh; display: flex; flex-direction: column; background: #fff; border-top: 2px solid var(--accent); box-shadow: 0 -14px 44px rgba(0, 0, 0, .55); animation: calcUp .28s ease-out; }
+@keyframes calcUp { from { transform: translateY(40px); opacity: 0; } }
+@keyframes calcSide { from { transform: translateX(-40px); opacity: 0; } }
+.calchead { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; background: #0d1020; color: #fff; font-size: 13px; font-weight: 700; }
+.calchead span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calchead a, .calchead button { font: inherit; font-size: 12px; font-weight: 700; color: #cfd6f5; background: rgba(255, 255, 255, .09); border: 0; border-radius: 8px; padding: 7px 10px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.calchead button.x { padding: 5px 9px; font-size: 16px; line-height: 1; }
+.calcbody { flex: 1; min-height: 0; position: relative; background: #fff; }
+.calcbody iframe, .calcbody .calcmount { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.calcnote { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; color: #5b6170; font-size: 14px; }
+body.calc-open #app { padding-bottom: calc(50vh + 20px); padding-bottom: calc(50dvh + 20px); }
+/* wide screens: calculator on the left half, question on the right half */
+body.calc-side .calc { right: auto; top: 0; height: auto; width: 50vw; border-top: 0; border-right: 2px solid var(--accent); box-shadow: 14px 0 44px rgba(0, 0, 0, .55); animation-name: calcSide; }
+body.calc-side #app { margin-left: 50vw; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+body.calc-side .answers { grid-template-columns: 1fr; }
+/* when room is tight, shrink the streak header so the question stays in view */
+body.calc-compact .counter { font-size: 46px; }
+body.calc-compact .counterlabel, body.calc-compact .halo, body.calc-compact .plabel { display: none; }
+body.calc-compact .counterwrap { margin: 0; }
+body.calc-compact .progress { margin: 4px auto 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .tierup { animation-duration: 2.1s !important; }
+  .milestone { animation-duration: 2.2s !important; }
+  .milestone.note { animation-duration: 3.6s !important; }
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<canvas id="fx"></canvas>
+<div id="flash"></div>
+
+<div id="app">
+  <!-- START SCREEN -->
+  <section id="screen-start" class="start">
+    <h1 class="logo">SAT <span>STREAK</span></h1>
+    <p class="tag">Answer real SAT questions in a row. Every right answer grows your streak and powers up the world. A miss sends you back to the start of your level. Reach Legendary and play until you miss.</p>
+    <div class="records">
+      <div class="record glass"><b id="best">0</b><span>Best streak</span></div>
+      <div class="record glass"><b id="besttier">Spark</b><span>Highest tier</span></div>
+    </div>
+    <div class="path" id="path" aria-label="The seven tiers"></div>
+    <div class="settings glass">
+      <h2>Settings</h2>
+      <div class="row">
+        <span>Questions</span>
+        <div class="seg" id="set-section">
+          <button data-v="mixed">Mixed</button>
+          <button data-v="math">Math</button>
+          <button data-v="rw">Reading &amp; Writing</button>
+        </div>
+      </div>
+      <div class="row">
+        <span>Source</span>
+        <button class="ghostbtn hidden" id="btn-recheck" style="margin:0">Try again</button>
+        <p class="srcnote" id="srcnote" style="flex-basis:100%;margin:0"></p>
+        <button class="ghostbtn hidden" id="btn-forget" style="margin:0;font-size:13px">Reset seen questions</button>
+      </div>
+      <div class="row">
+        <span>Timer</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="seg" id="set-seconds">
+            <button data-v="20">20s</button>
+            <button data-v="40">40s</button>
+            <button data-v="75">75s</button>
+          </div>
+          <button class="switch" id="set-timer" aria-label="Timer on or off"></button>
+        </div>
+      </div>
+      <div class="row">
+        <span>Sound</span>
+        <button class="switch" id="set-sound" aria-label="Sound on or off"></button>
+      </div>
+    </div>
+    <button class="bigbtn" id="btn-start">Start streak</button>
+    <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
+    <p class="howto">Answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or tap. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="screen-game" class="game hidden">
+    <div class="topbar">
+      <button class="iconbtn" id="btn-home" aria-label="Back to start"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <span class="tierpill" id="tiername">Spark</span>
+      <button class="iconbtn" id="btn-mute" aria-label="Sound on or off"></button>
+    </div>
+    <div class="counterwrap">
+      <div class="halo" id="halo"></div>
+      <div class="counter" id="counter" aria-live="polite"><span class="num" id="counter-num">0</span></div>
+      <div class="counterlabel" id="counterlabel">streak</div>
+    </div>
+    <div class="progress">
+      <div class="ptrack"><div class="pfill" id="pfill"></div><div class="pticks" id="pticks"></div></div>
+      <div class="plabel"><span id="plabel-l"></span><span id="plabel-r"></span></div>
+    </div>
+    <article class="card glass" id="card">
+      <div class="timerbar hidden" id="timerbar"><i id="timerfill"></i></div>
+      <div class="qmeta" id="qmeta"></div>
+      <div class="passage hidden" id="passage"></div>
+      <div class="question" id="question"></div>
+      <div class="answers" id="answers"></div>
+      <div class="review cardreview hidden" id="cardreview">
+        <h3 id="cr-title">Not quite</h3>
+        <p class="ans" id="cr-ans"></p>
+        <div class="exp" id="cr-exp"></div>
+        <p class="back" id="cr-back"></p>
+        <p class="qid" id="cr-id"></p>
+        <button class="bigbtn" id="btn-continue" type="button">Continue</button>
+      </div>
+    </article>
+  </section>
+
+  <!-- GAME OVER -->
+  <section id="screen-over" class="over glass hidden">
+    <h2 id="over-title">Streak broken</h2>
+    <div class="final" id="final">0</div>
+    <div class="finalsub">final streak</div>
+    <div id="newbest" class="newbest hidden">NEW BEST!</div>
+    <p class="overmsg" id="over-msg"></p>
+    <div class="statline">
+      <div><b id="over-acc">0%</b><span id="over-acc-sub">accuracy</span></div>
+      <div><b id="over-best">0</b><span>best ever</span></div>
+      <div><b id="over-tier">Spark</b><span>tier reached</span></div>
+    </div>
+    <div class="path" id="over-path" aria-hidden="true"></div>
+    <div class="review">
+      <h3>The one that got you</h3>
+      <div class="q" id="over-q"></div>
+      <p class="ans" id="over-ans"></p>
+      <div class="exp" id="over-exp"></div>
+      <p class="qid" id="over-id"></p>
+    </div>
+    <button class="bigbtn" id="btn-again">Play again</button>
+    <button class="ghostbtn" id="btn-menu">Back to start</button>
+  </section>
+</div>
+
+<!-- HIGHLIGHT BUTTON (appears next to selected text on touch screens) -->
+<button id="hl-btn" class="hlbtn hidden" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 01-2.8 0l-5.2-5.2a2 2 0 010-2.8L14 4"/></svg>Highlight</button>
+
+<!-- DESMOS CALCULATOR (opens beside math questions) -->
+<aside id="calc" class="calc hidden" aria-label="Desmos graphing calculator">
+  <div class="calchead">
+    <span>Desmos Graphing Calculator</span>
+    <button id="calc-reset" type="button">Reset</button>
+    <a id="calc-link" href="https://www.desmos.com/calculator" target="_blank" rel="noopener noreferrer">New tab</a>
+    <button id="calc-close" class="x" type="button" aria-label="Close calculator">&times;</button>
+  </div>
+  <div class="calcbody" id="calc-body"><div class="calcnote" id="calc-note">Loading Desmos…<br>If it stays blank, use “New tab”.</div></div>
+</aside>
+
+<script>
+/* =====================================================================
+   1. YOUR OWN QUESTIONS (optional)
+   The game draws its questions live from the College Board SAT Suite
+   Question Bank (see section 3b). This list is empty on purpose. Anything
+   you add here is used only when College Board can't be reached. Format:
+     { id: "my-1", section: "Math",            // or "Reading & Writing"
+       topic: "Algebra", difficulty: 1,        // 1 easy, 2 medium, 3 hard
+       passage: "Optional short text.",
+       question: "If 3x = 12, what is x?",
+       choices: ["2", "3", "4", "6"],          // four, in A B C D order
+       answer: "C",
+       explanation: "Divide both sides by 3: x = 4." },
+   ===================================================================== */
+const QUESTIONS = [];
+
+/* =====================================================================
+   2. TIER CONFIG  (edit this to change or add tiers)
+   min:        streak where the tier starts (tiers must be in order)
+   colors:     bg = background gradient stops, accent/accent2 = UI colors, glow = soft glow
+   bgSpeed:    how fast the background gradient moves (0 = still)
+   effects:    canvas layers drawn behind the card (see EFFECTS in section 4)
+   ui:         shake = screen shake on correct, burst = particle burst on correct,
+               glowBorder = glowing card border, fireCounter = streak number on fire
+   difficulty: chance of easy / medium / hard questions in this tier
+   ===================================================================== */
+const TIERS = [
+  { name: "Spark", min: 0,
+    colors: { bg: ["#07080d", "#0d1222", "#090b14"], accent: "#8ab4ff", accent2: "#c6d8ff", glow: "rgba(138,180,255,.55)" },
+    bgSpeed: 0.02,
+    effects: [{ type: "orbs", colors: ["70,110,255", "150,90,255", "40,170,255"] }, { type: "float", count: 34, color: "#a9c4ff" }],
+    ui: {}, difficulty: [0.75, 0.22, 0.03] },
+  { name: "Flame", min: 5,
+    colors: { bg: ["#2a0703", "#7a1a05", "#c2410c"], accent: "#ff8a3d", accent2: "#ffd166", glow: "rgba(255,120,40,.7)" },
+    bgSpeed: 0.12,
+    effects: [{ type: "heat" }, { type: "embers", count: 80 }],
+    ui: {}, difficulty: [0.65, 0.3, 0.05] },
+  { name: "Ocean", min: 10,
+    colors: { bg: ["#01122b", "#053a6b", "#0a5c8f"], accent: "#38d0ff", accent2: "#9af0ff", glow: "rgba(56,208,255,.6)" },
+    bgSpeed: 0.05,
+    effects: [{ type: "rays" }, { type: "school", count: 9 }, { type: "bubbles", count: 40 }, { type: "waves" }],
+    ui: {}, difficulty: [0.25, 0.6, 0.15] },
+  { name: "Storm", min: 15,
+    colors: { bg: ["#0b0418", "#24103f", "#120a24"], accent: "#b18cff", accent2: "#e2d4ff", glow: "rgba(177,140,255,.6)" },
+    bgSpeed: 0.03,
+    effects: [{ type: "clouds" }, { type: "rain", count: 220 }, { type: "lightning" }],
+    ui: { shake: true }, difficulty: [0.15, 0.65, 0.2] },
+  { name: "Galaxy", min: 20,
+    colors: { bg: ["#020210", "#0b0730", "#05041a"], accent: "#ff7ad9", accent2: "#9ec5ff", glow: "rgba(255,122,217,.55)" },
+    bgSpeed: 0.02,
+    effects: [{ type: "nebula" }, { type: "stars", count: 260, speed: 0.12 }, { type: "planet" }, { type: "shooting" }],
+    ui: {}, difficulty: [0.1, 0.6, 0.3] },
+  { name: "Supernova", min: 30,
+    colors: { bg: ["#12001f", "#3b0060", "#001a3d"], accent: "#ff4fd8", accent2: "#5ef2ff", glow: "rgba(255,79,216,.7)" },
+    bgSpeed: 0.1,
+    effects: [{ type: "pulse" }, { type: "nebula" }, { type: "stars", count: 300, speed: 0.35 }, { type: "rings" }],
+    ui: { burst: true, glowBorder: true }, difficulty: [0.05, 0.3, 0.65] },
+  { name: "Legendary", min: 50,
+    colors: { bg: ["#241000", "#5c2c00", "#2b0826"], accent: "#ffd23f", accent2: "#ff8ae2", glow: "rgba(255,210,63,.8)" },
+    bgSpeed: 0.08,
+    effects: [{ type: "aura" }, { type: "godrays" }, { type: "stars", count: 200, speed: 0.25 }, { type: "confetti", count: 46 }, { type: "fireworks" }],
+    ui: { burst: true, glowBorder: true, fireCounter: true }, difficulty: [0.05, 0.25, 0.7] },
+];
+
+/* The version of this page, shown at the bottom of the start screen. Raise it
+   with every change. The hosted site lets browsers keep an old copy for a
+   while, so on the web the page looks for a newer copy of itself and loads it. */
+const BUILD = "11";
+
+/* The Desmos calculator that can open beside math questions.
+   With no key, the Desmos website is shown in a frame (nothing to set up).
+   If you get your own free key at https://www.desmos.com/my-api and paste it
+   here, the calculator is built into the page instead. */
+const DESMOS_API_KEY = "";
+const DESMOS_URL = "https://www.desmos.com/calculator";
+
+/* Messages that pop up when you reach these streaks. */
+const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Absolutely locked in! 🌌", 50: "LEGENDARY! 👑", 100: "SAT GOD MODE 🏆" };
+
+/* =====================================================================
+   3. STORAGE (best streak, highest tier, settings — saved in this browser)
+   ===================================================================== */
+const STORE_KEY = "satStreak.v1";
+const Store = {
+  data: { best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false },
+  load() {
+    try { Object.assign(this.data, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch (e) { /* private mode: no saving */ }
+  },
+  save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(this.data)); } catch (e) { /* ignore */ }
+  },
+};
+Store.load();
+
+/* Questions you have already been shown, remembered between visits so the same
+   one doesn't come back until you have been through all the others. Only the
+   question ids are kept, never the questions. `missed` holds the ones you got
+   wrong, which return first once you have seen everything. `skip` holds ids the
+   game can't use (for example typed-answer questions), so they aren't fetched again. */
+const SEEN_KEY = "satStreak.seen.v1";
+const Seen = {
+  ids: new Set(), missed: new Set(), skip: new Set(),
+  load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
+      this.ids = new Set(d.ids || []);
+      this.missed = new Set(d.missed || []);
+      if (d.build === BUILD) this.skip = new Set(d.skip || []); // a new version may read more questions: check them again
+    } catch (e) { /* private mode: remembered for this visit only */ }
+  },
+  save() {
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify({ build: BUILD, ids: [...this.ids], missed: [...this.missed], skip: [...this.skip] })); } catch (e) { /* ignore */ }
+  },
+  has(id) { return this.ids.has(String(id)) || this.skip.has(String(id)); },
+  add(id) { this.ids.add(String(id)); this.save(); },
+  unusable(id) { this.skip.add(String(id)); this.save(); },
+  answered(id, right) { if (right) this.missed.delete(String(id)); else this.missed.add(String(id)); this.save(); },
+  forget(ids) { for (const id of ids) { this.ids.delete(String(id)); this.missed.delete(String(id)); } this.save(); },
+  reset() { this.ids.clear(); this.missed.clear(); this.save(); },
+};
+Seen.load();
+
+/* =====================================================================
+   3b. COLLEGE BOARD SOURCE (live)
+   Questions come straight from the public JSON endpoints behind the College
+   Board SAT Suite Question Bank (https://satsuitequestionbank.collegeboard.org/).
+   No question is stored: the list of question ids is loaded once per visit, and
+   each question is fetched when it's needed. The browser remembers only the ids
+   of questions you have been shown (see Seen above), so they don't repeat.
+   College Board difficulty maps to the tiers: Easy = 1, Medium = 2, Hard = 3.
+
+   The browser tries to reach College Board directly. If the browser blocks
+   that (cross-site rules), it tries the optional helper `node server.mjs`,
+   which only works when the page was opened through that helper.
+   ===================================================================== */
+const CB_API = "https://qbank-api.collegeboard.org/msreportingquestionbank-prod/questionbank";
+const CB_DISCLOSED = "https://saic.collegeboard.org/disclosed";
+const CB_EVENT = 99; // 99 = SAT
+const CB_SECTIONS = [
+  { name: "Reading & Writing", test: 1, domains: "INI,CAS,EOI,SEC" },
+  { name: "Math", test: 2, domains: "H,P,Q,S" },
+];
+
+const CB = {
+  state: "checking",  // checking | ready | failed
+  mode: "",           // "direct" or "helper"
+  list: null,         // question metadata (ids, section, difficulty), no text
+  error: "",
+  queue: [],          // prefetched questions (promises)
+  notice: "",         // a short message for the player, shown with the next question
+  reviewing: false,   // true while the questions you missed are coming back
+  reserved: new Set(),
+  DIFF: { E: 1, M: 2, H: 3 },
+
+  async request(url, body, ms, plain) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ms);
+    try {
+      const opt = { signal: ctl.signal };
+      if (body) { opt.method = "POST"; opt.body = JSON.stringify(body); opt.headers = { "content-type": plain ? "text/plain" : "application/json" }; }
+      const r = await fetch(url, opt);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    } finally { clearTimeout(timer); }
+  },
+
+  // The three calls, routed either straight to College Board or through the helper.
+  urls() {
+    return this.mode === "helper"
+      ? { list: "api/cb/get-questions", question: "api/cb/get-question", disclosed: (ibn) => "api/cb/disclosed/" + encodeURIComponent(ibn) }
+      : { list: CB_API + "/digital/get-questions", question: CB_API + "/digital/get-question", disclosed: (ibn) => CB_DISCLOSED + "/" + encodeURIComponent(ibn) + ".json" };
+  },
+
+  async loadList() {
+    const all = [];
+    for (const sec of CB_SECTIONS) {
+      const rows = await this.request(this.urls().list, { asmtEventId: CB_EVENT, test: sec.test, domain: sec.domains }, 30000, this.plain);
+      if (!Array.isArray(rows)) throw new Error("unexpected reply");
+      for (const r of rows) all.push({ section: sec.name, questionId: r.questionId, externalId: r.external_id || null, ibn: r.ibn || null, difficulty: r.difficulty || "M", topic: r.skill_desc || r.primary_class_cd_desc || "" });
+    }
+    // The same question must not be listed twice (under one id, or under two ids that fetch the same text).
+    const ids = new Set(), texts = new Set();
+    const once = all.filter((r) => {
+      const text = r.externalId || r.ibn || "id:" + r.questionId;
+      if (ids.has(r.questionId) || texts.has(text)) return false;
+      ids.add(r.questionId); texts.add(text);
+      return true;
+    });
+    all.length = 0; all.push(...once);
+    if (!all.length) throw new Error("no questions returned");
+    return all;
+  },
+
+  // Find a route to College Board that works from this page.
+  async detect() {
+    this.state = "checking"; this.error = ""; this.log = [];
+    const attempts = [["direct", false], ["direct", true]];
+    if (location.protocol.startsWith("http")) attempts.push(["helper", false]);
+    for (const [mode, plain] of attempts) {
+      this.mode = mode; this.plain = plain;
+      try { this.list = await this.loadList(); this.state = "ready"; return; }
+      catch (e) {
+        // TypeError = the browser refused or couldn't make the connection; AbortError = no answer in time.
+        const why = e.name === "TypeError" ? "blocked" : e.name === "AbortError" ? "timeout" : e.message;
+        this.log.push(`${mode}${plain ? " (plain)" : ""}: ${why}`);
+        if (mode === "direct" && !plain) this.error = why;
+      }
+    }
+    this.mode = ""; this.state = "failed";
+  },
+
+  get ready() { return this.state === "ready"; },
+
+  // How many questions the bank lists for each section, and how many of them you have been shown.
+  counts() {
+    const c = { rw: 0, math: 0, seen: 0 };
+    for (const r of this.list) { if (r.section === "Math") c.math++; else c.rw++; if (Seen.ids.has(String(r.questionId))) c.seen++; }
+    return c;
+  },
+
+  // Choose a random question id you haven't been shown, with difficulty weighted by the tier.
+  pickMeta(tierIndex) {
+    const sec = Store.data.section;
+    const mine = this.list.filter((r) => sec === "mixed" || (sec === "math") === (r.section === "Math"));
+    const free = (r) => !Game.used.has("cb-" + r.questionId) && !this.reserved.has(r.questionId) && !Seen.skip.has(String(r.questionId));
+    let pool = mine.filter((r) => free(r) && !Seen.ids.has(String(r.questionId)));
+    if (!pool.length && mine.some((r) => Seen.ids.has(String(r.questionId)))) {
+      // You have been through every question here. The ones you got wrong come
+      // back first; after those, the whole set starts over.
+      pool = mine.filter((r) => free(r) && Seen.missed.has(String(r.questionId)));
+      if (pool.length) { if (!this.reviewing) this.notice = "You have seen every question. Here are the ones you missed."; this.reviewing = true; }
+      else {
+        Seen.forget(mine.map((r) => r.questionId));
+        this.reviewing = false;
+        this.notice = "You have seen every question. Starting the set over.";
+        pool = mine.filter(free);
+      }
+    }
+    if (!pool.length) return null;
+    const w = TIERS[tierIndex].difficulty;
+    const avail = [1, 2, 3].filter((d) => pool.some((r) => this.DIFF[r.difficulty] === d));
+    if (!avail.length) return pool[Math.floor(Math.random() * pool.length)];
+    let x = Math.random() * avail.reduce((a, d) => a + w[d - 1], 0), diff = avail[avail.length - 1];
+    for (const d of avail) { x -= w[d - 1]; if (x <= 0) { diff = d; break; } }
+    const list = pool.filter((r) => this.DIFF[r.difficulty] === diff);
+    return list[Math.floor(Math.random() * list.length)];
+  },
+
+  // The letter the explanation calls correct ("Choice B is the best answer"), or "" if it
+  // doesn't say so in exactly one way.
+  keyFromRationale(html) {
+    const text = String(html || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+    const found = new Set(), re = /Choice\s+([A-D])\s+is\s+(?:the\s+)?(?:best|correct)/gi;
+    for (let m; (m = re.exec(text)); ) found.add(m[1].toUpperCase());
+    return found.size === 1 ? [...found][0] : "";
+  },
+
+  // Turn College Board's reply into the game's question format (or null to skip it).
+  // A question is only used when everything that says which choice is right agrees:
+  // the answer letter, the answer id, and the explanation. Anything unclear is skipped.
+  normalize(meta, raw) {
+    let passage, question, choices, answer, explanation;
+    if (meta.externalId) {
+      if (String(raw.type || "").toLowerCase() !== "mcq") return null; // typed-answer question
+      const opts = Array.isArray(raw.answerOptions) ? raw.answerOptions : [];
+      const correct = Array.isArray(raw.correct_answer) ? raw.correct_answer : [raw.correct_answer];
+      if (correct.length !== 1) return null;                           // no single right answer
+      passage = raw.stimulus; question = raw.stem; explanation = raw.rationale;
+      choices = opts.map((o) => (o && o.content) || ""); answer = String(correct[0] || "").trim().toUpperCase();
+      // The reply also names the right choice by id. If that points at a different choice, skip.
+      const keys = Array.isArray(raw.keys) ? raw.keys.map(String) : [];
+      const byId = opts.findIndex((o) => o && o.id != null && keys.includes(String(o.id)));
+      if (byId >= 0 && "ABCD"[byId] !== answer) return null;
+    } else {
+      const item = Array.isArray(raw) ? raw[0] : raw;
+      const ans = (item && item.answer) || {};
+      const ch = ans.choices && typeof ans.choices === "object" ? ans.choices : {};
+      const pick = (k) => { const v = ch[k] !== undefined ? ch[k] : ch[k.toUpperCase()]; return typeof v === "string" ? v : (v && v.body) || ""; };
+      passage = item && item.body; question = item && item.prompt; explanation = ans.rationale;
+      // Choices are looked up by their letter, never by the order they happen to arrive in.
+      choices = Object.keys(ch).length === 4 ? ["a", "b", "c", "d"].map(pick) : [];
+      answer = String(ans.correct_choice || "").trim().toUpperCase();
+    }
+    // The game has four answer buttons, so anything else is skipped.
+    if (!question || choices.length !== 4 || answer.length !== 1 || !"ABCD".includes(answer)) return null;
+    const said = this.keyFromRationale(explanation);
+    if (said && said !== answer) return null;                          // explanation disagrees with the key
+    const clean = choices.map(sanitize);
+    if (clean.some((c) => !hasContent(c))) return null;                // a choice came through empty
+    return {
+      id: "cb-" + meta.questionId, ref: String(meta.questionId), html: true, source: "College Board",
+      section: meta.section, topic: meta.topic, difficulty: this.DIFF[meta.difficulty] || 2,
+      passage: sanitize(passage), question: sanitize(question), choices: clean, answer,
+      explanation: sanitize(explanation),
+    };
+  },
+
+  async fetchOne(tierIndex) {
+    for (let tries = 0; tries < 6; tries++) {
+      const meta = this.pickMeta(tierIndex);
+      if (!meta) return null;
+      this.reserved.add(meta.questionId);
+      try {
+        const u = this.urls();
+        const raw = meta.externalId ? await this.request(u.question, { external_id: meta.externalId }, 12000, this.plain)
+          : meta.ibn ? await this.request(u.disclosed(meta.ibn), null, 12000) : null;
+        const q = raw && this.normalize(meta, raw);
+        if (q) { q.notice = this.notice; this.notice = ""; return q; } // the notice goes with the question it is about
+        Seen.unusable(meta.questionId); // answered, but not a question the game can use
+      } catch (e) { /* try another question */ }
+    }
+    return null;
+  },
+
+  fill(tierIndex) { while (this.queue.length < 2) this.queue.push(this.fetchOne(tierIndex)); },
+  reset() { this.queue = []; this.reserved.clear(); },
+
+  // Next question, or null if College Board is too slow or unreachable.
+  take(tierIndex) {
+    const p = this.queue.shift() || this.fetchOne(tierIndex);
+    this.fill(tierIndex);
+    return Promise.race([p, new Promise((r) => setTimeout(() => r(null), 10000))]);
+  },
+};
+
+/* Removes anything active (scripts, event handlers) from fetched HTML, then
+   tidies it so it reads the way College Board's own site shows it. */
+function sanitize(html) {
+  const doc = new DOMParser().parseFromString("<div>" + (html || "") + "</div>", "text/html");
+  const root = doc.body.firstElementChild;
+  const blocked = new Set(["SCRIPT", "IFRAME", "OBJECT", "EMBED", "LINK", "META", "STYLE", "FORM", "INPUT", "BUTTON", "BASE"]);
+  (function walk(el) {
+    for (const child of Array.from(el.children)) {
+      if (blocked.has(child.tagName.toUpperCase())) { child.remove(); continue; }
+      for (const a of Array.from(child.attributes)) {
+        const n = a.name.toLowerCase(), v = a.value.trim().toLowerCase();
+        if (n.startsWith("on") || ((n === "href" || n === "src" || n === "xlink:href") && v.startsWith("javascript:"))) child.removeAttribute(a.name);
+      }
+      walk(child);
+    }
+  })(root);
+  tidy(root, doc);
+  return root.innerHTML.trim();
+}
+
+/* Display fixes for fetched question HTML:
+   1. Each blank comes with the word "blank" for screen readers. However that
+      word is written (in a hidden element, in a plain element, or as loose
+      text), it must not be printed after the line. The text is read in order,
+      and a "blank" that directly follows a drawn blank is hidden or removed.
+   2. <mfenced>, an old way of writing brackets in math, is not drawn by current
+      browsers, which made brackets vanish: (x + 2)(x - 3) showed as x + 2x - 3.
+      It is rewritten into brackets every browser draws. */
+const SR_CLASS = /(^|[\s_-])(sr-only|sronly|sr|visually-?hidden|visuallyhidden|screen-?reader\S*|offscreen|a11y\S*|assistive\S*|hidden-visually)([\s_-]|$)/i;
+const GAP_CLASS = /(^|[\s_-])(blank|gap|underline|fill\S*)([\s_-]|$)/i;
+const LINE = "(?:[_\\uFF3F\\u2017\\u23AF]{2,}|\\u2014{3,})"; // a drawn blank: ____ and its look-alikes
+const LINE_END = new RegExp(LINE + "[\\s\\u00a0]*$");
+const LINE_THEN_WORD = new RegExp("(" + LINE + ")[\\s\\u00a0]*blank\\b", "gi");
+const WORD_FIRST = /^([\s ]*)blank\b/i, WORD_ONLY = /^[\s ]*blank[\s .]*$/i;
+function tidy(root, doc) {
+  const hide = (el) => el.setAttribute("class", "sr-only");
+  const empty = (el) => !el.textContent.trim() && !el.querySelector("img, svg, math");
+  // An element that stands for the blank without containing underscores (an empty underlined box).
+  const isGap = (el) => empty(el) && (/^(U|INS)$/.test(el.tagName) || el.getAttribute("aria-hidden") === "true" ||
+    GAP_CLASS.test(el.getAttribute("class") || "") || /underline|border-bottom/i.test(el.getAttribute("style") || ""));
+  for (const el of Array.from(root.querySelectorAll("[class]"))) if (SR_CLASS.test(el.getAttribute("class"))) hide(el);
+
+  const nodes = [], walker = doc.createTreeWalker(root, 5 /* elements and text */);
+  for (let n; (n = walker.nextNode()); ) nodes.push(n);
+  let after = false; // true while the last thing shown was a blank
+  for (const n of nodes) {
+    if (!n.isConnected && !root.contains(n)) continue;
+    if (n.nodeType === 1) { if (isGap(n)) after = true; continue; }
+    const el = n.parentElement;
+    if (el.closest("math, svg")) { after = false; continue; }
+    if (!n.nodeValue.trim()) continue;
+    const hidden = el.closest(".sr-only");
+    if (hidden) {
+      if (WORD_ONLY.test(hidden.textContent) && !after) { // the hidden word is the only sign of the blank: draw one
+        const line = doc.createElement("span");
+        line.className = "blank"; line.setAttribute("aria-hidden", "true"); line.textContent = "______";
+        hidden.before(line);
+      }
+      after = false;
+      continue;
+    }
+    let v = n.nodeValue.replace(LINE_THEN_WORD, "$1"); // "______ blank" inside one piece of text
+    if (after && WORD_FIRST.test(v)) {
+      if (el !== root && WORD_ONLY.test(el.textContent)) { hide(el); after = false; continue; } // <span>blank</span>
+      v = v.replace(WORD_FIRST, "$1");                                                           // loose text
+    }
+    if (v !== n.nodeValue) n.nodeValue = v;
+    if (v.trim()) after = LINE_END.test(v);
+  }
+  // Brackets in math.
+  const M = "http://www.w3.org/1998/Math/MathML";
+  const mo = (t) => { const o = doc.createElementNS(M, "mo"); o.textContent = t; return o; };
+  for (const f of Array.from(root.querySelectorAll("mfenced"))) {
+    const attr = (name, fallback) => (f.hasAttribute(name) ? f.getAttribute(name) : fallback);
+    const open = attr("open", "("), close = attr("close", ")"), seps = attr("separators", ",").replace(/\s+/g, "");
+    const row = doc.createElementNS(M, "mrow");
+    if (open) row.appendChild(mo(open));
+    Array.from(f.children).forEach((kid, i) => {
+      if (i && seps) row.appendChild(mo(seps[Math.min(i - 1, seps.length - 1)]));
+      row.appendChild(kid);
+    });
+    if (close) row.appendChild(mo(close));
+    f.replaceWith(row);
+  }
+}
+
+/* True if a piece of question HTML would actually show something. */
+function hasContent(html) {
+  return /<(img|svg|math|table)\b/i.test(html) || html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
+}
+
+/* Self-check: open index.html?selftest to run made-up sample replies (no College
+   Board content) through the code above and see whether each comes out right. */
+function selfTest() {
+  const meta = { questionId: "t1", externalId: "x1", section: "Math", topic: "", difficulty: "M" };
+  const old = { questionId: "t2", ibn: "i1", section: "Math", topic: "", difficulty: "E" };
+  const opts = (texts) => texts.map((t, i) => ({ id: "id" + i, content: "<p>" + t + "</p>" }));
+  const mcq = (over) => Object.assign({ type: "mcq", stem: "<p>Pick one.</p>", stimulus: "", answerOptions: opts(["w", "x", "y", "z"]), correct_answer: ["C"], keys: ["id2"], rationale: "<p>Choice C is the best answer.</p><p>Choice A is incorrect.</p>" }, over);
+  const disclosed = (over) => [{ prompt: "<p>Pick one.</p>", body: "", answer: Object.assign({ choices: { d: { body: "<p>z</p>" }, a: { body: "<p>w</p>" }, c: { body: "<p>y</p>" }, b: { body: "<p>x</p>" } }, correct_choice: "b", rationale: "<p>Choice B is correct.</p>" }, over) }];
+  const text = (html) => { const d = document.createElement("div"); d.innerHTML = html; d.querySelectorAll(".sr-only").forEach((e) => e.remove()); return d.textContent.replace(/\s+/g, " ").trim(); };
+  const n = (m, raw) => CB.normalize(m, raw);
+  const checks = [
+    ["blank: hidden word after underscores is not shown", text(sanitize('<p>The plan was <span aria-hidden="true">______</span><span class="sr-only">blank</span> by all.</p>')) === "The plan was ______ by all."],
+    ["blank: hidden word alone still draws a line", text(sanitize('<p>It was <span class="sr-only">blank</span> then.</p>')) === "It was ______ then."],
+    ["blank: bare word after underscores is not shown", text(sanitize("<p>It was ______<span>blank</span> then.</p>")) === "It was ______ then."],
+    ["blank: plain text ______blank loses the word", text(sanitize("<p>It was ______ blank then.</p>")) === "It was ______ then."],
+    ["blank: loose word after an underscore element", text(sanitize("<p>It was <span>______</span>blank then.</p>")) === "It was ______ then."],
+    ["blank: nested element after the line", text(sanitize('<p>It was <u>______</u> <span><b>Blank</b></span> then.</p>')) === "It was ______ then."],
+    ["blank: unknown hidden class after the line", text(sanitize('<p>It was <span>______</span><span class="qti-hidden">blank</span> then.</p>')) === "It was ______ then."],
+    ["blank: empty underlined box then the word", text(sanitize('<p>It was <span class="blank-line"></span><span>blank</span> then.</p>')) === "It was then."],
+    ["blank: two blanks in one sentence", text(sanitize('<p>A ______<span class="sr-only">blank</span> and B ______ blank end.</p>')) === "A ______ and B ______ end."],
+    ["blank: the ordinary word blank is left alone", text(sanitize("<p>She left the page blank.</p>")) === "She left the page blank."],
+    ["math: brackets are kept", text(sanitize("<math><mfenced><mrow><mi>x</mi><mo>+</mo><mn>2</mn></mrow></mfenced><mfenced><mn>3</mn><mn>4</mn></mfenced></math>")) === "(x+2)(3,4)"],
+    ["math: custom brackets are kept", text(sanitize('<math><mfenced open="[" close="]" separators=";"><mn>1</mn><mn>2</mn></mfenced></math>')) === "[1;2]"],
+    ["safety: scripts and handlers are removed", !/script|onerror/i.test(sanitize('<p>a<script>x()<\/script><img src="a.png" onerror="x()"></p>'))],
+    ["answer: letter, id and explanation agree", (n(meta, mcq({})) || {}).answer === "C"],
+    ["answer: id points at another choice, skipped", n(meta, mcq({ keys: ["id0"] })) === null],
+    ["answer: explanation names another choice, skipped", n(meta, mcq({ rationale: "<p>Choice A is the best answer.</p>" })) === null],
+    ["answer: explanation names no choice, letter is used", (n(meta, mcq({ rationale: "<p>Because of the slope.</p>" })) || {}).answer === "C"],
+    ["answer: two right answers listed, skipped", n(meta, mcq({ correct_answer: ["A", "C"] })) === null],
+    ["answer: no answer given, skipped", n(meta, mcq({ correct_answer: [] })) === null],
+    ["answer: typed-answer question, skipped", n(meta, mcq({ type: "spr", correct_answer: ["7"] })) === null],
+    ["answer: an empty choice, skipped", n(meta, mcq({ answerOptions: opts(["w", "", "y", "z"]) })) === null],
+    ["answer: three choices, skipped", n(meta, mcq({ answerOptions: opts(["w", "x", "y"]) })) === null],
+    ["older format: choices are placed by letter, not arrival order", (() => { const q = n(old, disclosed({})); return !!q && q.answer === "B" && q.choices.map(text).join("") === "wxyz"; })()],
+    ["older format: no answer key, skipped", n(old, disclosed({ correct_choice: "" })) === null],
+    ["older format: explanation disagrees, skipped", n(old, disclosed({ rationale: "<p>Choice D is correct.</p>" })) === null],
+  ];
+  const failed = checks.filter(([, ok]) => !ok);
+  const box = document.createElement("pre");
+  box.id = "selftest";
+  box.style.cssText = "position:fixed;inset:0;z-index:99;margin:0;padding:20px;overflow:auto;background:#0b0d16;color:#e8ecff;font:14px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap";
+  box.textContent = (failed.length ? failed.length + " of " + checks.length + " checks FAILED" : "All " + checks.length + " checks passed") + "  (version " + BUILD + ")\n\n" + checks.map(([name, ok]) => (ok ? "ok    " : "FAIL  ") + name).join("\n");
+  document.body.appendChild(box);
+  return { total: checks.length, failed: failed.map(([name]) => name) };
+}
+
+/* =====================================================================
+   4. VISUAL SYSTEM (canvas backgrounds, particles, tier transitions)
+   ===================================================================== */
+const bgCanvas = document.getElementById("bg");
+const fxCanvas = document.getElementById("fx");
+const bg = bgCanvas.getContext("2d");
+const fx = fxCanvas.getContext("2d");
+let W = 0, H = 0, DPR = 1, SCALE = 1;
+
+const REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* Keeps the game smooth: if frames start taking too long, it lowers the canvas
+   resolution and the number of particles, one step at a time. If a step down
+   doesn't actually help (for example a phone in low power mode, which caps the
+   frame rate whatever is drawn), it steps back up and stops adjusting. */
+const Quality = {
+  level: 0, sum: 0, n: 0, before: null, locked: false,
+  maxDpr: [1.5, 1, 0.75],     // canvas sharpness at each level
+  particles: [1, 0.7, 0.5],   // share of particles kept at each level
+  set(level) { this.level = level; resize(); Visuals.rebuild(); },
+  sample(ms) {
+    if (this.locked || ms > 100) return; // over 100ms: the tab was in the background, not a slow frame
+    this.sum += ms;
+    if (++this.n < 90) return;
+    const avg = this.sum / this.n;
+    this.sum = this.n = 0;
+    if (this.before != null) {           // we just stepped down: did it help?
+      if (avg > this.before * 0.9) { this.locked = true; this.set(this.level - 1); return; }
+      this.before = null;
+    }
+    if (avg > 21 && this.level < 2) { this.before = avg; this.set(this.level + 1); }
+  },
+};
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, Quality.maxDpr[Quality.level]);
+  const widthChanged = window.innerWidth !== W;
+  W = window.innerWidth; H = window.innerHeight;
+  for (const c of [bgCanvas, fxCanvas]) {
+    c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
+    c.getContext("2d").setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  // fewer particles on small screens keeps phones at 60fps
+  SCALE = Math.max(0.35, Math.min(1, (W * H) / (1280 * 800))) * Quality.particles[Quality.level];
+  return widthChanged;
+}
+window.addEventListener("resize", () => { if (resize() && typeof Visuals !== "undefined" && Visuals.scene) Visuals.rebuild(); });
+resize();
+
+const rand = (a, b) => a + Math.random() * (b - a);
+const TAU = Math.PI * 2;
+
+/* Each effect: init(state, opts) creates its particles; update(state, dt, t) moves them;
+   draw(ctx, state, t, alpha) paints them. Add a new effect here, then list it in a tier. */
+const EFFECTS = {
+  float: {
+    init(s, o) { s.p = Array.from({ length: Math.round(o.count * SCALE) + 6 }, () => ({ x: rand(0, W), y: rand(0, H), r: rand(1, 3), vx: rand(-6, 6), vy: rand(-10, -2), ph: rand(0, TAU) })); },
+    update(s, dt) { for (const p of s.p) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.y < -10) { p.y = H + 10; p.x = rand(0, W); } if (p.x < -10) p.x = W + 10; if (p.x > W + 10) p.x = -10; } },
+    draw(c, s, t, a, o) { c.fillStyle = o.color; for (const p of s.p) { c.globalAlpha = a * (0.35 + 0.35 * Math.sin(t * 1.3 + p.ph)); c.beginPath(); c.arc(p.x, p.y, p.r, 0, TAU); c.fill(); } },
+  },
+  embers: {
+    init(s, o) { s.p = Array.from({ length: Math.round(o.count * SCALE) + 10 }, () => newEmber(true)); },
+    update(s, dt, t) { for (let i = 0; i < s.p.length; i++) { const p = s.p[i]; p.y -= p.vy * dt; p.x += Math.sin(t * p.f + p.ph) * 20 * dt; p.life -= dt * p.decay; if (p.life <= 0 || p.y < -20) s.p[i] = newEmber(false); } },
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      for (const p of s.p) { c.globalAlpha = a * Math.max(0, p.life) * (0.6 + 0.4 * Math.sin(t * 12 + p.ph)); c.fillStyle = p.hot ? "#ffd27a" : "#ff6a1f"; c.beginPath(); c.arc(p.x, p.y, p.r, 0, TAU); c.fill(); }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  bubbles: {
+    init(s, o) { s.p = Array.from({ length: Math.round(o.count * SCALE) + 8 }, () => ({ x: rand(0, W), y: rand(0, H), r: rand(2, 9), v: rand(15, 45), ph: rand(0, TAU) })); },
+    update(s, dt, t) { for (const p of s.p) { p.y -= p.v * dt; p.x += Math.sin(t * 2 + p.ph) * 12 * dt; if (p.y < -20) { p.y = H + 20; p.x = rand(0, W); } } },
+    draw(c, s, t, a) { c.strokeStyle = "rgba(200,240,255,.8)"; c.lineWidth = 1.2; for (const p of s.p) { c.globalAlpha = a * 0.55; c.beginPath(); c.arc(p.x, p.y, p.r, 0, TAU); c.stroke(); c.globalAlpha = a * 0.5; c.fillStyle = "#e6fbff"; c.beginPath(); c.arc(p.x - p.r * 0.35, p.y - p.r * 0.35, p.r * 0.25, 0, TAU); c.fill(); } },
+  },
+  waves: {
+    init() {},
+    update() {},
+    draw(c, s, t, a) {
+      const layers = [["rgba(10,120,190,.35)", 0.78, 18, 0.008, 0.6], ["rgba(5,80,150,.45)", 0.84, 14, 0.011, -0.8], ["rgba(2,40,90,.6)", 0.9, 10, 0.015, 1.1]];
+      for (const [col, base, amp, k, sp] of layers) {
+        c.globalAlpha = a; c.fillStyle = col; c.beginPath(); c.moveTo(0, H);
+        for (let x = 0; x <= W + 20; x += 20) c.lineTo(x, H * base + Math.sin(x * k + t * sp) * amp + Math.sin(x * k * 2.3 - t * sp * 1.4) * amp * 0.4);
+        c.lineTo(W, H); c.closePath(); c.fill();
+      }
+    },
+  },
+  rays: {
+    init(s) { s.r = Array.from({ length: 5 }, (_, i) => ({ x: W * (0.1 + i * 0.2), w: rand(40, 110), ph: rand(0, TAU) })); },
+    update() {},
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      for (const r of s.r) {
+        const sway = Math.sin(t * 0.3 + r.ph) * 60;
+        const g = c.createLinearGradient(0, 0, 0, H * 0.85);
+        g.addColorStop(0, "rgba(160,230,255,.16)"); g.addColorStop(1, "rgba(160,230,255,0)");
+        c.globalAlpha = a * (0.6 + 0.4 * Math.sin(t * 0.7 + r.ph)); c.fillStyle = g; c.beginPath();
+        c.moveTo(r.x - r.w / 2, 0); c.lineTo(r.x + r.w / 2, 0); c.lineTo(r.x + sway + r.w * 1.6, H * 0.85); c.lineTo(r.x + sway - r.w * 0.4, H * 0.85); c.closePath(); c.fill();
+      }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  rain: {
+    init(s, o) { s.p = Array.from({ length: Math.round(o.count * SCALE) + 30 }, () => ({ x: rand(-100, W), y: rand(-H, H), l: rand(10, 22), v: rand(600, 900) })); },
+    update(s, dt) { for (const p of s.p) { p.y += p.v * dt; p.x += p.v * 0.18 * dt; if (p.y > H + 20) { p.y = rand(-60, -10); p.x = rand(-100, W); } } },
+    draw(c, s, t, a) { c.strokeStyle = "rgba(190,180,255,.45)"; c.lineWidth = 1; c.globalAlpha = a; c.beginPath(); for (const p of s.p) { c.moveTo(p.x, p.y); c.lineTo(p.x + p.l * 0.18, p.y + p.l); } c.stroke(); },
+  },
+  lightning: {
+    init(s) { s.next = rand(1.5, 4); s.flash = 0; s.bolts = []; },
+    update(s, dt) {
+      s.next -= dt; s.flash = Math.max(0, s.flash - dt * 2.2);
+      if (s.next <= 0) {
+        s.next = rand(3, 7); s.flash = 1;
+        // a jagged main bolt, plus a couple of thinner forks that split off it
+        const walk = (x, y, endY, spread) => { const pts = []; while (y < endY) { pts.push([x, y]); x += rand(-spread, spread); y += rand(18, 46); } return pts; };
+        const main = walk(rand(W * 0.15, W * 0.85), 0, H * rand(0.5, 0.8), 42);
+        s.bolts = [{ pts: main, w: 2.8 }];
+        for (let k = 0; k < 2; k++) {
+          const from = main[Math.floor(rand(1, Math.max(2, main.length - 2)))];
+          if (from) s.bolts.push({ pts: walk(from[0], from[1], from[1] + H * rand(0.12, 0.28), 34).map(([x, y], i) => [x + i * (k ? 14 : -14), y]), w: 1.4 });
+        }
+        Sound.thunder();
+      }
+    },
+    draw(c, s, t, a) {
+      if (s.flash <= 0) return;
+      c.globalAlpha = a * s.flash * 0.35; c.fillStyle = "#d9ccff"; c.fillRect(0, 0, W, H);
+      if (s.flash > 0.35) {
+        c.strokeStyle = "#fff"; c.shadowColor = "#b18cff"; c.shadowBlur = 22; c.lineJoin = "round";
+        for (const b of s.bolts) {
+          c.globalAlpha = a * s.flash; c.lineWidth = b.w;
+          c.beginPath(); b.pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke();
+        }
+        c.shadowBlur = 0;
+      }
+    },
+  },
+  /* ---- extra layers that give each world more depth ---- */
+  // big soft blobs of color that drift slowly
+  orbs: {
+    init(s, o) { s.b = o.colors.map((rgb, i) => ({ rgb, ph: i * 2.1 + rand(0, 1), r: rand(0.38, 0.52) })); },
+    update() {},
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      for (const b of s.b) {
+        const x = W * (0.5 + 0.34 * Math.cos(t * 0.07 + b.ph)), y = H * (0.45 + 0.3 * Math.sin(t * 0.09 + b.ph * 1.3)), R = Math.max(W, H) * b.r;
+        const g = c.createRadialGradient(x, y, 0, x, y, R);
+        g.addColorStop(0, `rgba(${b.rgb},.22)`); g.addColorStop(1, `rgba(${b.rgb},0)`);
+        c.globalAlpha = a; c.fillStyle = g; c.fillRect(x - R, y - R, R * 2, R * 2);
+      }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  // a bed of flames along the bottom of the screen
+  heat: {
+    init(s) { s.n = W < 700 ? 5 : 8; s.ph = Array.from({ length: s.n }, () => rand(0, TAU)); },
+    update() {},
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      const glow = c.createLinearGradient(0, H, 0, H * 0.45);
+      glow.addColorStop(0, `rgba(255,110,20,${0.36 + 0.07 * Math.sin(t * 5)})`); glow.addColorStop(1, "rgba(255,80,0,0)");
+      c.globalAlpha = a; c.fillStyle = glow; c.fillRect(0, H * 0.45, W, H * 0.55);
+      const w = (W / s.n) * 1.5;
+      for (let i = 0; i < s.n; i++) {
+        const x = (W * (i + 0.5)) / s.n, ph = s.ph[i];
+        const h = H * (0.17 + 0.07 * Math.sin(t * 3.1 + ph) + 0.04 * Math.sin(t * 7.3 + ph * 2));
+        const sway = Math.sin(t * 2.2 + ph) * w * 0.18;
+        const g = c.createLinearGradient(0, H, 0, H - h);
+        g.addColorStop(0, "rgba(255,168,56,.7)"); g.addColorStop(0.45, "rgba(255,96,20,.45)"); g.addColorStop(1, "rgba(255,60,0,0)");
+        c.globalCompositeOperation = "source-over"; // painted normally, so overlapping flames stay orange
+        c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.moveTo(x - w / 2, H + 2);
+        c.quadraticCurveTo(x - w / 3 + sway * 0.5, H - h * 0.55, x + sway, H - h);
+        c.quadraticCurveTo(x + w / 3 + sway * 0.5, H - h * 0.55, x + w / 2, H + 2);
+        c.closePath(); c.fill();
+      }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  // dark fish silhouettes crossing in the distance
+  school: {
+    init(s, o) { s.f = Array.from({ length: Math.round(o.count * Math.max(0.6, SCALE)) + 3 }, () => { const dir = Math.random() < 0.5 ? -1 : 1; return { x: rand(0, W), y: rand(H * 0.12, H * 0.72), v: rand(18, 46), size: rand(9, 22), dir, ph: rand(0, TAU) }; }); },
+    update(s, dt) { for (const f of s.f) { f.x += f.v * f.dir * dt; if (f.x > W + 60) f.x = -60; if (f.x < -60) f.x = W + 60; } },
+    draw(c, s, t, a) {
+      c.fillStyle = "rgba(2,26,56,.6)";
+      for (const f of s.f) {
+        const y = f.y + Math.sin(t * 0.8 + f.ph) * 8, wag = Math.sin(t * 7 + f.ph) * f.size * 0.25;
+        c.globalAlpha = a * 0.9; c.beginPath(); c.ellipse(f.x, y, f.size, f.size * 0.42, 0, 0, TAU); c.fill();
+        c.beginPath(); c.moveTo(f.x - f.dir * f.size * 0.8, y); c.lineTo(f.x - f.dir * f.size * 1.6, y - f.size * 0.5 + wag); c.lineTo(f.x - f.dir * f.size * 1.6, y + f.size * 0.5 + wag); c.closePath(); c.fill();
+      }
+    },
+  },
+  // heavy clouds rolling across the top
+  clouds: {
+    init(s) { const n = W < 700 ? 6 : 9; s.c = Array.from({ length: n }, (_, i) => ({ x: (W * (i + rand(0, 0.6))) / n, y: H * rand(-0.06, 0.2), r: Math.max(W, H) * rand(0.18, 0.3), v: rand(6, 16) })); },
+    update(s, dt) { for (const k of s.c) { k.x += k.v * dt; if (k.x - k.r > W) k.x = -k.r; } },
+    draw(c, s, t, a) {
+      for (const k of s.c) {
+        const g = c.createRadialGradient(k.x, k.y, 0, k.x, k.y, k.r);
+        g.addColorStop(0, "rgba(58,44,98,.62)"); g.addColorStop(0.6, "rgba(34,24,64,.34)"); g.addColorStop(1, "rgba(20,12,40,0)");
+        c.globalAlpha = a; c.fillStyle = g; c.fillRect(k.x - k.r, k.y - k.r, k.r * 2, k.r * 2);
+      }
+    },
+  },
+  // a ringed planet hanging in the corner
+  planet: {
+    init() {},
+    update() {},
+    draw(c, s, t, a) {
+      const R = Math.min(W, H) * 0.15, x = W * 0.8, y = H * 0.24 + Math.sin(t * 0.3) * 6, tilt = -0.42;
+      const ring = (front) => {
+        c.save(); c.translate(x, y); c.rotate(tilt); c.scale(1, 0.3);
+        c.globalAlpha = a * 0.75; c.lineWidth = R * 0.2; c.strokeStyle = "rgba(255,190,235,.5)";
+        c.beginPath(); c.arc(0, 0, R * 1.75, front ? 0 : Math.PI, front ? Math.PI : TAU); c.stroke();
+        c.lineWidth = R * 0.07; c.strokeStyle = "rgba(170,205,255,.6)";
+        c.beginPath(); c.arc(0, 0, R * 2.1, front ? 0 : Math.PI, front ? Math.PI : TAU); c.stroke();
+        c.restore();
+      };
+      ring(false);
+      const g = c.createRadialGradient(x - R * 0.4, y - R * 0.4, R * 0.1, x, y, R);
+      g.addColorStop(0, "#ffc7ee"); g.addColorStop(0.5, "#b455c9"); g.addColorStop(1, "#2a0f52");
+      c.globalAlpha = a; c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill();
+      const halo = c.createRadialGradient(x, y, R * 0.9, x, y, R * 1.5);
+      halo.addColorStop(0, "rgba(255,122,217,.25)"); halo.addColorStop(1, "rgba(255,122,217,0)");
+      c.fillStyle = halo; c.fillRect(x - R * 1.5, y - R * 1.5, R * 3, R * 3);
+      ring(true);
+    },
+  },
+  // shockwaves that keep expanding from the middle
+  rings: {
+    init(s) { s.list = []; s.next = 0.3; },
+    update(s, dt) {
+      s.next -= dt;
+      if (s.next <= 0) { s.next = 1.5; s.list.push({ t: 0, hue: rand(0, 360) }); }
+      for (const r of s.list) r.t += dt / 3.2;
+      s.list = s.list.filter((r) => r.t < 1);
+    },
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      const max = Math.max(W, H) * 0.85;
+      for (const r of s.list) {
+        c.globalAlpha = a * (1 - r.t) * 0.7; c.strokeStyle = `hsl(${r.hue},100%,70%)`; c.lineWidth = 1 + 5 * (1 - r.t);
+        c.beginPath(); c.arc(W / 2, H * 0.42, max * (1 - Math.pow(1 - r.t, 2)), 0, TAU); c.stroke();
+      }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  // slow golden beams turning behind everything
+  godrays: {
+    init() {},
+    update() {},
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      const cx = W / 2, cy = H * 0.42, R = Math.hypot(W, H), n = 12;
+      c.fillStyle = "rgba(255,214,110,.075)"; c.globalAlpha = a;
+      for (let i = 0; i < n; i++) {
+        const a0 = t * 0.07 + (i / n) * TAU, a1 = a0 + (TAU / n) * (0.32 + 0.1 * Math.sin(t * 0.9 + i));
+        c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R); c.lineTo(cx + Math.cos(a1) * R, cy + Math.sin(a1) * R); c.closePath(); c.fill();
+      }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  // golden flakes fluttering down
+  confetti: {
+    init(s, o) { s.p = Array.from({ length: Math.round(o.count * SCALE) + 12 }, () => ({ x: rand(0, W), y: rand(-H, H), v: rand(40, 110), rot: rand(0, TAU), vr: rand(-3, 3), w: rand(4, 9), ph: rand(0, TAU), col: ["#ffd23f", "#fff1b8", "#ff8ae2", "#ffffff"][Math.floor(rand(0, 4))] })); },
+    update(s, dt, t) { for (const p of s.p) { p.y += p.v * dt; p.x += Math.sin(t * 1.3 + p.ph) * 24 * dt; p.rot += p.vr * dt; if (p.y > H + 12) { p.y = -12; p.x = rand(0, W); } } },
+    draw(c, s, t, a) {
+      for (const p of s.p) {
+        const flip = Math.sin(t * 4 + p.ph);
+        c.globalAlpha = a * (0.55 + 0.45 * Math.abs(flip)); c.fillStyle = p.col;
+        c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.scale(1, flip); c.fillRect(-p.w / 2, -p.w * 0.3, p.w, p.w * 0.6); c.restore();
+      }
+    },
+  },
+  stars: {
+    init(s, o) { s.p = Array.from({ length: Math.round(o.count * SCALE) + 40 }, () => newStar(true)); s.speed = o.speed; },
+    update(s, dt) { for (let i = 0; i < s.p.length; i++) { const p = s.p[i]; p.z -= dt * s.speed; if (p.z <= 0.02) s.p[i] = newStar(false); } },
+    draw(c, s, t, a) {
+      c.fillStyle = "#fff";
+      const cx = W / 2, cy = H / 2, f = Math.max(W, H) * 0.5;
+      for (const p of s.p) {
+        const x = cx + (p.x / p.z) * f * 0.5, y = cy + (p.y / p.z) * f * 0.5;
+        if (x < 0 || x > W || y < 0 || y > H) continue;
+        const r = Math.min(2.4, (1 - p.z) * 2.2 + 0.3);
+        c.globalAlpha = a * Math.min(1, (1 - p.z) * 1.4) * (0.75 + 0.25 * Math.sin(t * 3 + p.ph));
+        c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+      }
+    },
+  },
+  nebula: {
+    init(s) { s.blobs = [["255,80,200", 0.42, 0], ["90,140,255", 0.36, 2.1], ["140,60,255", 0.3, 4.2]]; },
+    update() {},
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      const R = Math.max(W, H) * 0.55;
+      for (const [rgb, op, ph] of s.blobs) {
+        const ang = t * 0.05 + ph, x = W / 2 + Math.cos(ang) * W * 0.22, y = H / 2 + Math.sin(ang) * H * 0.18;
+        const g = c.createRadialGradient(x, y, 0, x, y, R);
+        g.addColorStop(0, `rgba(${rgb},${op})`); g.addColorStop(1, `rgba(${rgb},0)`);
+        c.globalAlpha = a; c.fillStyle = g; c.fillRect(0, 0, W, H);
+      }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  shooting: {
+    init(s) { s.next = rand(0.8, 2.5); s.list = []; },
+    update(s, dt) {
+      s.next -= dt;
+      if (s.next <= 0) { s.next = rand(1.2, 3.5); const ang = rand(0.35, 0.7); s.list.push({ x: rand(-50, W * 0.7), y: rand(-20, H * 0.4), vx: Math.cos(ang) * 900, vy: Math.sin(ang) * 900, life: 1 }); }
+      for (const p of s.list) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.4; }
+      s.list = s.list.filter((p) => p.life > 0);
+    },
+    draw(c, s, t, a) {
+      for (const p of s.list) {
+        const g = c.createLinearGradient(p.x, p.y, p.x - p.vx * 0.15, p.y - p.vy * 0.15);
+        g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(1, "rgba(255,255,255,0)");
+        c.globalAlpha = a * p.life; c.strokeStyle = g; c.lineWidth = 2; c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - p.vx * 0.15, p.y - p.vy * 0.15); c.stroke();
+      }
+    },
+  },
+  pulse: {
+    init() {},
+    update() {},
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      const hue = (t * 40) % 360, k = 0.55 + 0.45 * Math.sin(t * 2.2);
+      const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * (0.45 + k * 0.15));
+      g.addColorStop(0, `hsla(${hue},100%,65%,${0.45 * k})`); g.addColorStop(0.5, `hsla(${(hue + 80) % 360},100%,55%,${0.18 * k})`); g.addColorStop(1, "rgba(0,0,0,0)");
+      c.globalAlpha = a; c.fillStyle = g; c.fillRect(0, 0, W, H);
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  aura: {
+    init() {},
+    update() {},
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      const cx = W / 2, cy = H * 0.42, R = Math.max(W, H) * 0.75;
+      if (c.createConicGradient) {
+        const g = c.createConicGradient(t * 0.25, cx, cy);
+        ["#ff3b3b", "#ffd23f", "#3ee08a", "#38d0ff", "#b18cff", "#ff4fd8", "#ff3b3b"].forEach((col, i, arr) => g.addColorStop(i / (arr.length - 1), col));
+        c.globalAlpha = a * 0.16; c.fillStyle = g; c.fillRect(0, 0, W, H);
+      }
+      const k = 0.7 + 0.3 * Math.sin(t * 1.8);
+      const g2 = c.createRadialGradient(cx, cy, 0, cx, cy, R * 0.6);
+      g2.addColorStop(0, `rgba(255,214,90,${0.5 * k})`); g2.addColorStop(0.4, "rgba(255,150,40,.15)"); g2.addColorStop(1, "rgba(0,0,0,0)");
+      c.globalAlpha = a; c.fillStyle = g2; c.fillRect(0, 0, W, H);
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+  fireworks: {
+    init(s) { s.next = 0.2; s.rockets = []; s.sparks = []; },
+    update(s, dt) {
+      s.next -= dt;
+      if (s.next <= 0) { s.next = rand(0.35, 0.8); s.rockets.push({ x: rand(W * 0.1, W * 0.9), y: H + 10, vy: -rand(520, 760), top: rand(H * 0.12, H * 0.45), hue: rand(0, 360) }); }
+      for (const r of s.rockets) { r.y += r.vy * dt; if (r.y <= r.top) { r.done = true; const n = Math.round(46 * Math.max(0.6, SCALE)); for (let i = 0; i < n; i++) { const ang = (i / n) * TAU, sp = rand(80, 240); s.sparks.push({ x: r.x, y: r.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 1, hue: r.hue + rand(-20, 20) }); } } }
+      s.rockets = s.rockets.filter((r) => !r.done);
+      for (const p of s.sparks) { p.vy += 140 * dt; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.75; }
+      s.sparks = s.sparks.filter((p) => p.life > 0);
+    },
+    draw(c, s, t, a) {
+      c.globalCompositeOperation = "lighter";
+      for (const r of s.rockets) { c.globalAlpha = a; c.fillStyle = `hsl(${r.hue},100%,75%)`; c.fillRect(r.x - 1.5, r.y, 3, 10); }
+      for (const p of s.sparks) { c.globalAlpha = a * p.life; c.fillStyle = `hsl(${p.hue},100%,${55 + p.life * 20}%)`; c.beginPath(); c.arc(p.x, p.y, 2.2, 0, TAU); c.fill(); }
+      c.globalCompositeOperation = "source-over";
+    },
+  },
+};
+
+function newEmber(anyY) { return { x: rand(0, W), y: anyY ? rand(0, H) : H + rand(0, 40), r: rand(1, 3.2), vy: rand(40, 110), f: rand(1, 3), ph: rand(0, TAU), life: rand(0.6, 1), decay: rand(0.08, 0.25), hot: Math.random() < 0.35 }; }
+function newStar(anyZ) { return { x: rand(-1, 1), y: rand(-1, 1), z: anyZ ? rand(0.05, 1) : 1, ph: rand(0, TAU) }; }
+
+/* A Scene is one tier's full background: gradient + its effect layers. */
+class Scene {
+  constructor(tier) {
+    this.tier = tier;
+    this.layers = tier.effects.map((o) => { const s = {}; EFFECTS[o.type].init(s, o); return { o, s }; });
+  }
+  update(dt, t) { for (const L of this.layers) EFFECTS[L.o.type].update(L.s, dt, t, L.o); }
+  draw(c, t, alpha) {
+    const [c1, c2, c3] = this.tier.colors.bg;
+    const ang = t * this.tier.bgSpeed * TAU;
+    const dx = Math.cos(ang) * W * 0.6, dy = Math.sin(ang) * H * 0.6;
+    const g = c.createLinearGradient(W / 2 - dx, H / 2 - dy, W / 2 + dx, H / 2 + dy);
+    g.addColorStop(0, c1); g.addColorStop(0.5 + 0.25 * Math.sin(t * this.tier.bgSpeed * 5), c2); g.addColorStop(1, c3);
+    c.globalAlpha = alpha; c.fillStyle = g; c.fillRect(0, 0, W, H);
+    for (const L of this.layers) EFFECTS[L.o.type].draw(c, L.s, t, alpha, L.o);
+    c.globalAlpha = 1;
+  }
+}
+
+/* Visuals: crossfades between scenes, plus everything drawn on the top canvas:
+   bursts of sparks, the comet that carries a point to the counter, shockwave
+   rings and the shatter effect. */
+const Visuals = {
+  scene: null, prev: null, blend: 1, bursts: [], shards: [], comets: [], rings: [], t: 0,
+  setTier(index, instant) {
+    const tier = TIERS[index];
+    if (this.scene && this.scene.tier === tier) return;
+    this.prev = instant ? null : this.scene;
+    this.scene = new Scene(tier);
+    this.blend = instant ? 1 : 0;
+    const r = document.documentElement.style;
+    r.setProperty("--accent", tier.colors.accent);
+    r.setProperty("--accent2", tier.colors.accent2);
+    r.setProperty("--glow", tier.colors.glow);
+    document.body.classList.toggle("glow-border", !!tier.ui.glowBorder);
+    document.body.classList.toggle("fire-counter", !!tier.ui.fireCounter);
+    const meta = document.querySelector('meta[name="theme-color"]'); // phone browser bar matches the world
+    if (meta) meta.content = tier.colors.bg[0];
+  },
+  // Start the current scene again (after the screen size or quality level changes).
+  rebuild() { if (!this.scene) return; this.scene = new Scene(this.scene.tier); this.prev = null; this.blend = 1; },
+  burst(x, y, colors, n = 50, speed = 320, gravity = 260) {
+    n = Math.round(n * Math.max(0.6, SCALE));
+    for (let i = 0; i < n; i++) { const a = rand(0, TAU), v = rand(speed * 0.3, speed); this.bursts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, r: rand(1.5, 4), col: colors[i % colors.length], g: gravity }); }
+  },
+  // A glowing dot that flies from one point to another, then calls done().
+  comet(x0, y0, x1, y1, color, done) {
+    if (REDUCED) { done(); return; }
+    this.comets.push({ x0, y0, x1, y1, cx: (x0 + x1) / 2 + rand(-90, 90), cy: Math.min(y0, y1) - rand(20, 70), t: 0, color, done });
+  },
+  ring(x, y, color, maxR = 200, dur = 0.6, width = 5) { this.rings.push({ x, y, color, maxR, dur, width, t: 0 }); },
+  // A quick wash of color over the whole screen.
+  flash(color, peak = 0.35, ms = 450) {
+    const f = document.getElementById("flash");
+    f.style.background = color;
+    if (f.animate) f.animate([{ opacity: peak }, { opacity: 0 }], { duration: ms, easing: "ease-out" });
+  },
+  shatter(el) {
+    const b = el.getBoundingClientRect();
+    const cols = 6, rows = 5, cw = b.width / cols, rh = b.height / rows;
+    const pts = [];
+    for (let j = 0; j <= rows; j++) { pts[j] = []; for (let i = 0; i <= cols; i++) { const edge = i === 0 || j === 0 || i === cols || j === rows; pts[j][i] = [b.left + i * cw + (edge ? 0 : rand(-cw * 0.3, cw * 0.3)), b.top + j * rh + (edge ? 0 : rand(-rh * 0.3, rh * 0.3))]; } }
+    const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const p = [pts[j][i], pts[j][i + 1], pts[j + 1][i + 1], pts[j + 1][i]];
+      for (const tri of [[p[0], p[1], p[2]], [p[0], p[2], p[3]]]) {
+        const mx = (tri[0][0] + tri[1][0] + tri[2][0]) / 3, my = (tri[0][1] + tri[1][1] + tri[2][1]) / 3;
+        const dirx = mx - cx, diry = my - cy, d = Math.hypot(dirx, diry) || 1;
+        this.shards.push({ pts: tri.map(([x, y]) => [x - mx, y - my]), x: mx, y: my, vx: (dirx / d) * rand(120, 380), vy: (diry / d) * rand(120, 380) - rand(60, 200), rot: 0, vr: rand(-6, 6), life: 1, shade: rand(0, 1) });
+      }
+    }
+    this.burst(cx, cy, ["#ff4d5e", "#ffffff", "#ff9aa5"], 70, 460);
+    this.ring(cx, cy, "#ff4d5e", Math.max(b.width, b.height) * 0.9, 0.7, 8);
+  },
+  frame(dt) {
+    this.t += dt;
+    const t = this.t;
+    if (this.blend < 1) { this.blend = Math.min(1, this.blend + dt / 1.4); if (this.blend >= 1) this.prev = null; }
+    bg.globalAlpha = 1; bg.fillStyle = "#000"; bg.fillRect(0, 0, W, H);
+    if (this.prev) { this.prev.update(dt, t); this.prev.draw(bg, t, 1); }
+    this.scene.update(dt, t);
+    this.scene.draw(bg, t, this.prev ? this.blend : 1);
+
+    if (!this.bursts.length && !this.shards.length && !this.comets.length && !this.rings.length) {
+      if (this.dirty) { fx.clearRect(0, 0, W, H); this.dirty = false; } // nothing to draw: leave the top canvas alone
+      return;
+    }
+    this.dirty = true;
+    fx.clearRect(0, 0, W, H);
+    if (this.comets.length) {
+      fx.globalCompositeOperation = "lighter";
+      for (const c of this.comets) {
+        c.t = Math.min(1, c.t + dt / 0.36);
+        const e = c.t * c.t * (3 - 2 * c.t), u = 1 - e; // ease in and out along a curved path
+        const x = u * u * c.x0 + 2 * u * e * c.cx + e * e * c.x1, y = u * u * c.y0 + 2 * u * e * c.cy + e * e * c.y1;
+        for (let k = 0; k < 2; k++) this.bursts.push({ x: x + rand(-3, 3), y: y + rand(-3, 3), vx: rand(-30, 30), vy: rand(-30, 30), life: 0.6, r: rand(1.5, 3.5), col: k ? "#ffffff" : c.color, g: 0 });
+        const g = fx.createRadialGradient(x, y, 0, x, y, 22);
+        g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.25, c.color); g.addColorStop(1, "rgba(0,0,0,0)");
+        fx.globalAlpha = 1; fx.fillStyle = g; fx.fillRect(x - 22, y - 22, 44, 44);
+      }
+      const landed = this.comets.filter((c) => c.t >= 1);
+      this.comets = this.comets.filter((c) => c.t < 1);
+      for (const c of landed) c.done();
+    }
+    if (this.rings.length) {
+      fx.globalCompositeOperation = "lighter";
+      for (const r of this.rings) {
+        r.t += dt / r.dur;
+        const k = Math.min(1, r.t), e = 1 - (1 - k) * (1 - k);
+        fx.globalAlpha = 1 - k; fx.strokeStyle = r.color; fx.lineWidth = r.width * (1 - k) + 0.5;
+        fx.beginPath(); fx.arc(r.x, r.y, r.maxR * e, 0, TAU); fx.stroke();
+      }
+      this.rings = this.rings.filter((r) => r.t < 1);
+    }
+    if (this.bursts.length) {
+      fx.globalCompositeOperation = "lighter"; fx.lineCap = "round";
+      for (const p of this.bursts) {
+        p.vx *= 0.96; p.vy = p.vy * 0.96 + p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.2;
+        // each spark is a short streak pointing the way it is moving
+        fx.globalAlpha = Math.max(0, p.life); fx.strokeStyle = p.col; fx.lineWidth = p.r * 1.4;
+        fx.beginPath(); fx.moveTo(p.x, p.y); fx.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035 + 0.01); fx.stroke();
+      }
+      this.bursts = this.bursts.filter((p) => p.life > 0);
+    }
+    fx.globalCompositeOperation = "source-over";
+    if (this.shards.length) {
+      for (const s of this.shards) {
+        s.vy += 900 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.rot += s.vr * dt; s.life -= dt * 0.8;
+        fx.save(); fx.translate(s.x, s.y); fx.rotate(s.rot); fx.globalAlpha = Math.max(0, s.life);
+        fx.beginPath(); s.pts.forEach(([x, y], i) => (i ? fx.lineTo(x, y) : fx.moveTo(x, y))); fx.closePath();
+        fx.fillStyle = s.shade > 0.75 ? "rgba(70,78,112,.92)" : s.shade > 0.4 ? "rgba(34,39,60,.92)" : "rgba(20,23,38,.94)";
+        fx.fill(); fx.strokeStyle = "rgba(255,130,145,.85)"; fx.lineWidth = 1.2; fx.stroke(); fx.restore();
+      }
+      this.shards = this.shards.filter((s) => s.life > 0 && s.y < H + 200);
+    }
+    fx.globalAlpha = 1;
+  },
+};
+
+/* =====================================================================
+   5. SOUND (Web Audio API, no files)
+   ===================================================================== */
+const Sound = {
+  ctx: null,
+  get muted() { return Store.data.muted; },
+  ensure() {
+    if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); }
+    if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+    return this.ctx;
+  },
+  tone(freq, start, dur, type = "sine", vol = 0.2) {
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(0.0001, start); g.gain.exponentialRampToValueAtTime(vol, start + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    o.connect(g).connect(c.destination); o.start(start); o.stop(start + dur + 0.05);
+  },
+  noise(start, dur, vol, filterFreq) {
+    const c = this.ctx, len = Math.round(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = buf; f.type = "lowpass"; f.frequency.value = filterFreq; g.gain.value = vol;
+    src.connect(f).connect(g).connect(c.destination); src.start(start);
+  },
+  // Pleasant ding; climbs a major pentatonic scale as the streak grows.
+  ding(streak) {
+    if (this.muted || !this.ensure()) return;
+    const steps = [0, 2, 4, 7, 9], i = Math.min(streak, 24), semis = Math.floor(i / 5) * 12 + steps[i % 5];
+    const f = 523.25 * Math.pow(2, semis / 12), t = this.ctx.currentTime;
+    this.tone(f, t, 0.35, "sine", 0.18); this.tone(f * 2, t, 0.25, "triangle", 0.05);
+    this.tone(f * 3, t + 0.03, 0.14, "sine", 0.025); // a little sparkle on top
+  },
+  tap() {
+    if (this.muted || !this.ensure()) return;
+    this.tone(660, this.ctx.currentTime, 0.07, "triangle", 0.06);
+  },
+  // filtered noise that sweeps upward: a "whoosh"
+  sweep(start, dur, vol, from, to) {
+    const c = this.ctx, len = Math.round(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((Math.PI * i) / len);
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = buf; f.type = "bandpass"; f.Q.value = 1.2; f.frequency.setValueAtTime(from, start); f.frequency.exponentialRampToValueAtTime(to, start + dur); g.gain.value = vol;
+    src.connect(f).connect(g).connect(c.destination); src.start(start);
+  },
+  tierUp() {
+    if (this.muted || !this.ensure()) return;
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => this.tone(f, t + i * 0.08, 0.6, "triangle", 0.12));
+    this.tone(1567.98, t + 0.42, 0.9, "sine", 0.1);
+    this.sweep(t, 0.6, 0.12, 300, 5000);
+  },
+  break() {
+    if (this.muted || !this.ensure()) return;
+    const c = this.ctx, t = c.currentTime;
+    this.noise(t, 0.4, 0.35, 4000);
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(330, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.6);
+    g.gain.setValueAtTime(0.14, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.65);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.7);
+  },
+  thunder() { if (this.muted || !this.ctx || this.ctx.state !== "running") return; this.noise(this.ctx.currentTime + 0.15, 1.2, 0.18, 300); },
+};
+
+/* =====================================================================
+   6. GAME LOGIC
+   ===================================================================== */
+const Game = {
+  streak: 0, tierIndex: 0, peakTierThisRun: 0, used: new Set(), current: null, order: null,
+  correct: 0, answered: 0,  // counted over the whole run, for the accuracy shown at the end
+  reviewing: false,         // true while the explanation of a missed question is on screen
+  locked: false, timerId: null, timeLeft: 0,
+
+  tierFor(streak) { let i = 0; TIERS.forEach((t, k) => { if (streak >= t.min) i = k; }); return i; },
+
+  pool() {
+    const s = Store.data.section;
+    return QUESTIONS.filter((q) => s === "mixed" || (s === "math" ? q.section === "Math" : q.section === "Reading & Writing"));
+  },
+
+  // Pick an unused question, choosing difficulty by the current tier's weights.
+  pickQuestion() {
+    if (!this.pool().length) return null;
+    let pool = this.pool().filter((q) => !this.used.has(q.id));
+    if (!pool.length) { this.used.clear(); if (this.current) this.used.add(this.current.id); pool = this.pool().filter((q) => !this.used.has(q.id)); }
+    const w = TIERS[this.tierIndex].difficulty;
+    const avail = [1, 2, 3].filter((d) => pool.some((q) => q.difficulty === d));
+    const total = avail.reduce((s, d) => s + w[d - 1], 0);
+    let r = Math.random() * total, diff = avail[avail.length - 1];
+    for (const d of avail) { r -= w[d - 1]; if (r <= 0) { diff = d; break; } }
+    const list = pool.filter((q) => q.difficulty === diff);
+    return list[Math.floor(Math.random() * list.length)];
+  },
+
+  start() {
+    Sound.ensure();
+    this.streak = 0; this.tierIndex = 0; this.peakTierThisRun = 0; this.used.clear(); this.current = null;
+    this.correct = 0; this.answered = 0; this.reviewing = false;
+    this.run = (this.run || 0) + 1;
+    CB.reset();
+    Visuals.setTier(0);
+    UI.show("game");
+    UI.renderStreak(false);
+    this.next();
+  },
+
+  async next() {
+    const run = this.run;
+    let q = null;
+    if (CB.ready) {
+      const slow = setTimeout(() => UI.loading(), 200);
+      q = await CB.take(this.tierIndex);
+      clearTimeout(slow);
+      if (run !== this.run || $("screen-game").classList.contains("hidden")) return; // player left meanwhile
+    }
+    q = q || this.pickQuestion(); // your own QUESTIONS, if you added any
+    if (!q) { this.current = null; this.locked = true; UI.noQuestion(); return; }
+    this.current = q;
+    this.used.add(this.current.id);
+    if (q.source === "College Board") Seen.add(q.ref); // shown: it won't come back on a later round
+    if (q.notice) UI.milestone(q.notice, true);
+    // Built-in answers are shuffled. College Board ones keep A-D order because
+    // their explanations refer to the choices by letter.
+    this.order = this.current.html ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    this.locked = false;
+    UI.renderQuestion(this.current, this.order);
+    this.startTimer();
+  },
+
+  startTimer() {
+    clearInterval(this.timerId);
+    if (!Store.data.timer) { UI.timer(null); return; }
+    const total = Store.data.seconds, started = performance.now();
+    UI.timer(1);
+    this.timerId = setInterval(() => {
+      const left = 1 - (performance.now() - started) / (total * 1000);
+      UI.timer(Math.max(0, left));
+      if (left <= 0) { clearInterval(this.timerId); this.miss(null, true); }
+    }, 100);
+  },
+
+  answer(displayIndex) {
+    if (this.locked || !this.current) return;
+    if (UI.isOut(displayIndex)) return; // crossed out: bring it back first
+    const letter = "ABCD"[this.order[displayIndex]];
+    if (letter === this.current.answer) this.hit(displayIndex); else this.miss(displayIndex, false);
+  },
+
+  hit(displayIndex) {
+    this.locked = true;
+    if (this.current.source === "College Board") Seen.answered(this.current.ref, true);
+    clearInterval(this.timerId);
+    this.streak++; this.correct++; this.answered++;
+    UI.markRight(displayIndex);
+    Sound.ding(this.streak);
+    UI.buzz(12);
+    const streak = this.streak, run = this.run;
+    const newTier = this.tierFor(streak), tier = TIERS[newTier], tieredUp = newTier > this.tierIndex;
+    if (tieredUp) { this.tierIndex = newTier; this.peakTierThisRun = Math.max(this.peakTierThisRun, newTier); }
+    if (streak > Store.data.best) Store.data.best = streak;
+    if (newTier > Store.data.highestTier) Store.data.highestTier = newTier;
+    Store.save();
+    const colors = [tier.colors.accent, tier.colors.accent2, "#ffffff"];
+    const from = UI.answerRect(displayIndex), to = UI.counterRect();
+    Visuals.burst(from.x, from.y, ["#3ee08a", "#b8ffd9", "#ffffff"], 16, 230);
+    // The point flies from the answer up to the counter, and the counter reacts when it lands.
+    Visuals.comet(from.x, from.y, to.x, to.y, tier.colors.accent2, () => {
+      if (run !== this.run || this.streak !== streak || $("screen-game").classList.contains("hidden")) return;
+      UI.renderStreak(true);
+      Visuals.ring(to.x, to.y, tier.colors.accent, 130, 0.5);
+      Visuals.burst(to.x, to.y, colors, tier.ui.burst ? 46 : 16, tier.ui.burst ? 320 : 210);
+      if (tier.ui.shake) UI.shake();
+      if (tieredUp) {
+        Visuals.setTier(newTier);
+        Sound.tierUp();
+        UI.tierUp(newTier, MILESTONES[streak]);
+        Visuals.flash("#ffffff", 0.5, 500);
+        Visuals.burst(W / 2, H / 2, colors, 130, 560);
+        Visuals.ring(W / 2, H / 2, tier.colors.accent, Math.max(W, H) * 0.7, 0.9, 10);
+        Visuals.ring(W / 2, H / 2, tier.colors.accent2, Math.max(W, H) * 0.5, 1.1, 6);
+        UI.buzz([20, 40, 30]);
+      } else if (MILESTONES[streak]) {
+        UI.milestone(MILESTONES[streak]);
+      }
+    });
+    setTimeout(() => this.next(), tieredUp ? 1050 : 560);
+  },
+
+  /* A miss. Below the last level it is a checkpoint: you see the answer and the
+     explanation, drop back to the start of the level you are in, and carry on.
+     In the last level the first miss ends the run. */
+  miss(displayIndex, timedOut) {
+    if (this.locked) return;
+    this.locked = true;
+    if (this.current.source === "College Board") Seen.answered(this.current.ref, false); // comes back first once everything has been seen
+    clearInterval(this.timerId);
+    this.answered++;
+    const correctDisplay = this.order.indexOf("ABCD".indexOf(this.current.answer));
+    UI.markWrong(displayIndex, correctDisplay);
+    Sound.break();
+    UI.buzz([40, 50, 90]);
+    UI.shake(true);
+    Visuals.flash("#ff2b40", 0.38, 600);
+    const run = this.run, tier = TIERS[this.tierIndex];
+    if (this.tierIndex < TIERS.length - 1) {
+      const from = this.streak;
+      this.reviewing = true;
+      UI.showReview({ q: this.current, timedOut, from, to: tier.min, tier });
+      setTimeout(() => {
+        if (run !== this.run || !this.reviewing) return;
+        this.streak = tier.min;
+        UI.renderStreak(false);
+        if (from !== tier.min) { const at = UI.counterRect(); UI.dropCounter(); Visuals.ring(at.x, at.y, "#ff4d5e", 150, 0.6); Visuals.burst(at.x, at.y, ["#ff4d5e", "#ff9aa5", "#ffffff"], 26, 260); }
+      }, 450);
+      return;
+    }
+    const final = this.streak;
+    const isNewBest = final > 0 && final >= Store.data.best && final > (this.bestAtStart || 0);
+    setTimeout(() => {
+      if (run !== this.run) return;
+      Visuals.shatter(document.getElementById("card"));
+      UI.showOver({ final, timedOut, isNewBest, q: this.current, peak: this.peakTierThisRun, correct: this.correct, answered: this.answered });
+      this.streak = 0; this.tierIndex = 0;
+      Visuals.setTier(0);
+    }, 650);
+  },
+
+  // Continue after a checkpoint miss: the old card shatters and the next question comes in.
+  resume() {
+    if (!this.reviewing) return;
+    this.reviewing = false;
+    const run = this.run;
+    this.streak = TIERS[this.tierIndex].min;
+    UI.renderStreak(false);
+    Sound.tap();
+    Visuals.shatter(document.getElementById("card"));
+    $("card").style.opacity = 0;
+    setTimeout(() => { if (run === this.run && !$("screen-game").classList.contains("hidden")) this.next(); }, 380);
+  },
+};
+
+/* =====================================================================
+   7. UI
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+/* The highlighter. Select text in the passage or the question to mark it
+   yellow; tap a highlight to remove it. With a mouse the highlight is made as
+   soon as you let go. On a touch screen a "Highlight" button appears next to
+   the selection, because there you keep adjusting the selection handles.
+   Highlights live in the question's own HTML, so the next question starts clean. */
+const Highlighter = {
+  range: null, group: 0,
+  areas() { return [$("passage"), $("question")]; },
+  // The current selection, if it covers text inside the passage or question.
+  current() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount || !sel.toString().trim()) return null;
+    const range = sel.getRangeAt(0);
+    return this.areas().some((a) => !a.classList.contains("hidden") && range.intersectsNode(a)) ? range : null;
+  },
+  // Wrap every piece of text the range covers (inside the two areas) in a <mark>.
+  apply(range) {
+    if (!range) return 0;
+    const g = String(++this.group), jobs = [];
+    for (const area of this.areas()) {
+      if (area.classList.contains("hidden") || !range.intersectsNode(area)) continue;
+      const walker = document.createTreeWalker(area, NodeFilter.SHOW_TEXT);
+      for (let n; (n = walker.nextNode()); ) {
+        if (!n.nodeValue.trim() || !range.intersectsNode(n)) continue;
+        if (n.parentElement.closest("mark.hl, math, svg, .sr-only, button")) continue; // already marked, or not plain text
+        const start = n === range.startContainer ? range.startOffset : 0;
+        const end = n === range.endContainer ? range.endOffset : n.nodeValue.length;
+        if (end > start && n.nodeValue.slice(start, end).trim()) jobs.push([n, start, end]);
+      }
+    }
+    for (const [n, start, end] of jobs) {
+      const piece = n.splitText(start);
+      piece.splitText(end - start);
+      const mark = document.createElement("mark");
+      mark.className = "hl"; mark.dataset.g = g; mark.title = "Tap to remove this highlight";
+      piece.replaceWith(mark); mark.appendChild(piece);
+    }
+    for (const area of this.areas()) area.normalize(); // drop the empty text nodes that splitting leaves behind
+    window.getSelection().removeAllRanges();
+    this.hideButton();
+    return jobs.length;
+  },
+  // Remove one highlight (every piece made by the same selection).
+  remove(mark) {
+    for (const area of this.areas()) {
+      for (const m of Array.from(area.querySelectorAll('mark.hl[data-g="' + mark.dataset.g + '"]'))) {
+        const parent = m.parentNode;
+        m.replaceWith(...m.childNodes);
+        parent.normalize();
+      }
+    }
+  },
+  showButton(range) {
+    const r = range.getBoundingClientRect(), b = $("hl-btn");
+    if (!r.width && !r.height) return this.hideButton();
+    this.range = range.cloneRange();
+    b.classList.remove("hidden");
+    // below the selection, clear of the phone's own copy menu; above it if there is no room
+    const top = r.bottom + 14 + 44 < innerHeight ? r.bottom + 14 : Math.max(8, r.top - 54);
+    b.style.top = top + "px";
+    b.style.left = Math.min(innerWidth - 70, Math.max(70, r.left + r.width / 2)) + "px";
+  },
+  hideButton() { this.range = null; $("hl-btn").classList.add("hidden"); },
+  init() {
+    let lastPointer = "mouse";
+    document.addEventListener("pointerdown", (e) => { lastPointer = e.pointerType || "mouse"; }, true);
+    // mouse: highlight on release
+    document.addEventListener("mouseup", (e) => {
+      if (lastPointer !== "mouse" || e.target.closest("#hl-btn")) return;
+      setTimeout(() => this.apply(this.current()), 0); // let the browser finish updating the selection
+    });
+    // touch and pen: offer the button while there is a selection
+    document.addEventListener("selectionchange", () => {
+      if (lastPointer === "mouse") return;
+      const range = this.current();
+      if (range) this.showButton(range); else if (document.activeElement !== $("hl-btn")) this.hideButton();
+    });
+    const b = $("hl-btn");
+    // Act on the press itself: a tap elsewhere would drop the selection before a click arrives.
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); this.apply(this.current() || this.range); });
+    b.addEventListener("click", () => this.apply(this.current() || this.range)); // keyboard
+    // tap a highlight to remove it
+    for (const area of this.areas()) {
+      area.addEventListener("click", (e) => {
+        const mark = e.target.closest && e.target.closest("mark.hl");
+        const sel = window.getSelection();
+        if (mark && (!sel || sel.isCollapsed)) this.remove(mark);
+      });
+    }
+  },
+};
+
+/* The split view: Desmos on one half of the screen, the question on the other.
+   It first opens when its button is tapped. After that it remembers that you
+   want it: it steps aside on Reading & Writing questions and comes back on the
+   next math question, until you close it. */
+const Calc = {
+  wanted: false, built: false, api: null,
+  isMath(q) { return !!q && q.section === "Math"; },
+  toggle() {
+    this.wanted = !this.wanted;
+    this.sync();
+    if (this.wanted) window.scrollTo(0, 0);
+  },
+  sync() {
+    const onGame = !$("screen-game").classList.contains("hidden");
+    const open = this.wanted && onGame && this.isMath(Game.current);
+    if (open && !this.built) this.build();
+    $("calc").classList.toggle("hidden", !open);
+    document.body.classList.toggle("calc-open", open);
+    this.layout();
+    const b = $("btn-calc");
+    if (b) b.setAttribute("aria-pressed", String(open));
+    if (open && this.api) this.api.resize();
+  },
+  // Side by side when the screen is wide, stacked when it is tall and narrow.
+  layout() {
+    const open = document.body.classList.contains("calc-open");
+    const side = innerWidth >= 820 || (innerWidth > innerHeight && innerWidth >= 600);
+    document.body.classList.toggle("calc-side", open && side);
+    document.body.classList.toggle("calc-compact", open && (!side || innerHeight < 640));
+  },
+  build() {
+    this.built = true;
+    if (!DESMOS_API_KEY) { this.frame(); return; }
+    const s = document.createElement("script");
+    s.src = "https://www.desmos.com/api/v1.11/calculator.js?apiKey=" + encodeURIComponent(DESMOS_API_KEY);
+    s.onload = () => {
+      try {
+        const mount = document.createElement("div");
+        mount.className = "calcmount";
+        $("calc-body").appendChild(mount);
+        this.api = window.Desmos.GraphingCalculator(mount, { keypad: true, expressions: true });
+        $("calc-note").classList.add("hidden");
+      } catch (e) { this.frame(); }
+    };
+    s.onerror = () => this.frame();
+    document.head.appendChild(s);
+  },
+  frame() {
+    const old = $("calc-body").querySelector(".calcmount"); if (old) old.remove();
+    const f = document.createElement("iframe");
+    f.src = DESMOS_URL;
+    f.title = "Desmos graphing calculator";
+    f.referrerPolicy = "no-referrer";
+    f.setAttribute("allow", "clipboard-write");
+    f.onload = () => $("calc-note").classList.add("hidden");
+    $("calc-body").appendChild(f);
+  },
+  reset() {
+    if (this.api) { this.api.setBlank(); return; }
+    const f = $("calc-body").querySelector("iframe");
+    if (f) f.src = DESMOS_URL;
+  },
+};
+
+const ICONS = {
+  graph: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c3 0 3-10 6-10s3 7 7 7"/></svg>',
+  soundOn: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M16.5 8.5a5 5 0 010 7M19.2 6a8.5 8.5 0 010 12"/></svg>',
+  soundOff: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg>',
+};
+const UI = {
+  show(name) {
+    for (const s of ["start", "game", "over"]) $("screen-" + s).classList.toggle("hidden", s !== name);
+    if (name === "start") this.renderStart();
+    Calc.sync(); // the calculator only belongs to the game screen
+    window.scrollTo(0, 0);
+  },
+
+  // The row of seven tiers. Tiers up to `reached` are lit; `pulse` makes the last lit one glow.
+  renderPath(el, reached, pulse) {
+    el.innerHTML = "";
+    TIERS.forEach((t, i) => {
+      const n = document.createElement("div");
+      n.className = "node" + (i <= reached ? " on" : "") + (pulse && i === reached ? " now" : "");
+      n.style.setProperty("--c", t.colors.accent);
+      n.innerHTML = "<i></i><span></span><em></em>";
+      n.querySelector("span").textContent = t.name;
+      n.querySelector("em").textContent = t.min;
+      el.appendChild(n);
+    });
+  },
+
+  renderStart() {
+    $("best").textContent = Store.data.best;
+    const top = TIERS[Store.data.highestTier] || TIERS[0];
+    $("besttier").textContent = top.name;
+    $("besttier").style.color = top.colors.accent;
+    this.renderPath($("path"), TIERS.indexOf(top), false);
+    for (const [id, key] of [["set-section", "section"], ["set-seconds", "seconds"]]) {
+      $(id).querySelectorAll("button").forEach((b) => b.classList.toggle("on", String(Store.data[key]) === b.dataset.v));
+    }
+    $("set-timer").classList.toggle("on", Store.data.timer);
+    $("set-sound").classList.toggle("on", !Store.data.muted);
+    $("set-seconds").style.opacity = Store.data.timer ? 1 : 0.4;
+    // question source status
+    const note = $("srcnote"), canPlay = CB.ready || QUESTIONS.length > 0;
+    $("btn-start").disabled = !canPlay;
+    $("btn-start").style.opacity = canPlay ? 1 : 0.45;
+    $("btn-start").textContent = CB.state === "checking" && !canPlay ? "Connecting…" : "Start streak";
+    $("btn-recheck").classList.toggle("hidden", CB.state !== "failed");
+    if (CB.ready) {
+      const c = CB.counts();
+      note.innerHTML = `<b>Live from College Board.</b> Its bank lists ${c.rw.toLocaleString()} Reading &amp; Writing and ${c.math.toLocaleString()} Math questions, drawn at random. You have seen ${c.seen.toLocaleString()}. Nothing repeats until you have seen them all; then the ones you missed come back first.`;
+    }
+    else if (CB.state === "checking") note.textContent = "Connecting to the College Board question bank…";
+    else {
+      let why;
+      if (navigator.onLine === false) why = "<b>You're offline.</b> Connect to the internet and try again.";
+      else if (CB.error === "blocked") why = "<b>Your browser couldn't connect to College Board.</b> Most likely College Board's site doesn't accept requests from this page. Run the helper instead: <b>node server.mjs</b>, then open http://localhost:8080 (see the README).";
+      else if (CB.error === "timeout") why = "<b>College Board didn't answer in time.</b> Try again in a moment.";
+      else why = `<b>College Board answered, but not as expected</b> (${CB.error}). Its question bank may have changed.`;
+      note.innerHTML = why + (QUESTIONS.length ? ` Using your own ${QUESTIONS.length} questions for now.` : "") + `<br><span style="opacity:.7">Details: ${CB.log.join(" · ")}</span>`;
+    }
+    $("credit").classList.toggle("hidden", !CB.ready);
+    $("btn-forget").classList.toggle("hidden", !(CB.ready && CB.counts().seen > 0));
+    this.renderMute();
+  },
+
+  renderMute() { $("btn-mute").innerHTML = Store.data.muted ? ICONS.soundOff : ICONS.soundOn; },
+
+  // pop = the streak just grew: roll the number, pulse the glow and float a "+1".
+  renderStreak(pop) {
+    const s = Game.streak, i = Game.tierFor(s), tier = TIERS[i], next = TIERS[i + 1];
+    const c = $("counter"), num = $("counter-num");
+    if (pop && num.textContent !== String(s)) {
+      const ghost = num.cloneNode(true);
+      ghost.removeAttribute("id"); ghost.className = "num ghost"; ghost.setAttribute("aria-hidden", "true");
+      c.appendChild(ghost); setTimeout(() => ghost.remove(), 300);
+      num.textContent = s;
+      num.classList.remove("in"); void num.offsetWidth; num.classList.add("in");
+      const halo = $("halo"); halo.classList.remove("hit"); void halo.offsetWidth; halo.classList.add("hit");
+      const plus = document.createElement("div");
+      plus.className = "plus"; plus.textContent = "+1"; plus.setAttribute("aria-hidden", "true");
+      plus.style.left = Math.min(c.parentNode.clientWidth - 48, c.offsetLeft + (c.offsetWidth + num.offsetWidth) / 2 + 4) + "px"; // just right of the number
+      c.parentNode.appendChild(plus); setTimeout(() => plus.remove(), 900);
+    } else {
+      num.textContent = s; num.classList.remove("in");
+    }
+    $("counterlabel").textContent = Game.answered ? `streak · ${Game.correct} of ${Game.answered} right` : "streak";
+    const pill = $("tiername"), label = `Tier ${i + 1} · ${tier.name}`;
+    if (pop && pill.textContent !== label) { pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump"); }
+    pill.textContent = label;
+    if (next) {
+      const pct = ((s - tier.min) / (next.min - tier.min)) * 100;
+      $("pfill").style.width = pct + "%";
+      $("pticks").style.setProperty("--seg", next.min - tier.min);
+      $("pticks").classList.remove("hidden");
+      $("plabel-l").textContent = tier.name;
+      $("plabel-r").textContent = `${next.min - s} to ${next.name}`;
+    } else {
+      $("pfill").style.width = "100%";
+      $("pticks").classList.add("hidden");
+      $("plabel-l").textContent = tier.name;
+      $("plabel-r").textContent = "MAX TIER";
+    }
+  },
+
+  // Built-in questions are plain text; College Board ones are (sanitized) HTML.
+  put(el, content, isHtml) {
+    el.classList.toggle("rich", !!isHtml);
+    if (isHtml) el.innerHTML = content; else el.textContent = content;
+  },
+
+  clearCard() {
+    $("card").classList.remove("correct", "failed", "in");
+    $("card").style.opacity = 1;
+    $("qmeta").innerHTML = ""; $("passage").classList.add("hidden");
+    $("answers").innerHTML = ""; $("answers").classList.remove("done");
+    $("cardreview").classList.add("hidden");
+    Highlighter.hideButton();
+  },
+
+  noQuestion() {
+    this.clearCard();
+    Calc.sync();
+    $("question").innerHTML = '<div class="loadingq">Couldn\'t load a question from College Board. Your streak is safe.<br><br><button class="bigbtn" id="btn-retry" style="max-width:320px;margin:0 auto">Try again</button></div>';
+    $("btn-retry").onclick = () => Game.next();
+  },
+
+  // A shimmering placeholder in the shape of a question.
+  loading() {
+    this.clearCard();
+    $("question").innerHTML = '<div class="skel" role="status" aria-label="Loading the next question"><i></i><i></i><i style="width:62%"></i></div>';
+    $("answers").innerHTML = '<div class="skel-a"></div>'.repeat(4);
+  },
+
+  renderQuestion(q, order) {
+    this.clearCard();
+    for (const [txt, cls] of [[q.section, ""], [q.topic, ""], [["Easy", "Medium", "Hard"][q.difficulty - 1], "d" + q.difficulty]]) {
+      if (!txt) continue;
+      const span = document.createElement("span"); span.className = "chip " + cls; span.textContent = txt; $("qmeta").appendChild(span);
+    }
+    if (q.source) { const span = document.createElement("span"); span.className = "chip"; span.textContent = q.source; $("qmeta").appendChild(span); }
+    { // the cross-out tool: turn it on, then cross out choices you have ruled out
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "calcbtn"; b.id = "btn-elim";
+      b.setAttribute("aria-label", "Cross-out tool: show or hide the cross-out buttons beside each choice");
+      b.setAttribute("aria-pressed", String(!!Store.data.crossOut));
+      b.innerHTML = "<s>ABC</s>";
+      b.onclick = () => {
+        Sound.tap();
+        Store.data.crossOut = !Store.data.crossOut; Store.save();
+        b.setAttribute("aria-pressed", String(Store.data.crossOut));
+        $("answers").classList.toggle("elim", Store.data.crossOut);
+      };
+      $("qmeta").appendChild(b);
+    }
+    if (Calc.isMath(q)) { // math questions get a button that opens Desmos beside the question
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "calcbtn"; b.id = "btn-calc";
+      b.setAttribute("aria-label", "Open or close the Desmos graphing calculator");
+      b.innerHTML = ICONS.graph + "<span>Desmos</span>";
+      b.onclick = () => { Sound.tap(); Calc.toggle(); };
+      $("qmeta").appendChild(b);
+    }
+    Calc.sync();
+    this.put($("passage"), q.passage || "", q.html);
+    $("passage").classList.toggle("hidden", !q.passage);
+    this.put($("question"), q.question, q.html);
+    const box = $("answers");
+    order.forEach((orig, i) => {
+      const b = document.createElement("button");
+      b.className = "answer";
+      b.style.setProperty("--i", i);
+      const label = q.html ? "ABCD"[i] : i + 1;
+      b.innerHTML = `<span class="k">${label}</span><span class="t"></span><span class="strike" role="button" aria-label="Cross out choice ${label}"><s>${label}</s></span>`;
+      this.put(b.querySelector(".t"), q.choices[orig], q.html);
+      // Tapping the cross-out control never answers. Tapping a crossed-out choice only brings it back.
+      b.querySelector(".strike").addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); this.strike(i); });
+      b.onclick = (e) => {
+        if (e.target.closest && e.target.closest(".strike")) return;
+        if (b.classList.contains("out")) { this.strike(i, false); return; }
+        Game.answer(i);
+      };
+      box.appendChild(b);
+    });
+    box.classList.toggle("elim", !!Store.data.crossOut);
+    const card = $("card");
+    void card.offsetWidth; card.classList.add("in"); // replays the slide-in for every new question
+  },
+
+  isOut(i) { const b = $("answers").children[i]; return !!b && b.classList.contains("out"); },
+
+  // Cross out choice i, or bring it back. `on` forces one or the other.
+  strike(i, on) {
+    const b = $("answers").children[i];
+    if (!b || b.disabled) return;
+    const out = b.classList.toggle("out", on);
+    const k = b.querySelector(".k").textContent, ctl = b.querySelector(".strike");
+    ctl.innerHTML = out ? "Undo" : "<s></s>";
+    if (!out) ctl.firstChild.textContent = k;
+    ctl.setAttribute("aria-label", (out ? "Bring back choice " : "Cross out choice ") + k);
+    if (out) b.setAttribute("aria-label", "Choice " + k + ", crossed out. Activate to bring it back."); else b.removeAttribute("aria-label");
+    Sound.tap();
+  },
+
+  lockAnswers() {
+    $("card").classList.remove("in");
+    $("answers").classList.add("done");
+    for (const b of $("answers").children) b.disabled = true;
+  },
+
+  markRight(i) {
+    this.lockAnswers();
+    $("answers").children[i].classList.add("right");
+    $("card").classList.add("correct");
+  },
+
+  markWrong(i, correct) {
+    this.lockAnswers();
+    const btns = $("answers").children;
+    if (i != null) btns[i].classList.add("wrong");
+    btns[correct].classList.add("right");
+    $("card").classList.add("failed");
+  },
+
+  timer(frac) {
+    const bar = $("timerbar");
+    if (frac == null) { bar.classList.add("hidden"); return; }
+    bar.classList.remove("hidden");
+    $("timerfill").style.transform = `scaleX(${frac})`;
+    bar.classList.toggle("low", frac < 0.25);
+  },
+
+  counterRect() { const r = $("counter").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
+  answerRect(i) { const r = $("answers").children[i].getBoundingClientRect(); return { x: r.left + Math.min(34, r.width / 2), y: r.top + r.height / 2 }; },
+
+  shake(hard) {
+    const cls = hard ? "shake-hard" : "shake";
+    document.body.classList.remove("shake", "shake-hard"); void document.body.offsetWidth; document.body.classList.add(cls);
+    setTimeout(() => document.body.classList.remove(cls), hard ? 520 : 400);
+  },
+
+  // A short vibration on phones that support it. Follows the sound setting.
+  buzz(pattern) { try { if (!Store.data.muted && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* not supported */ } },
+
+  tierUp(index, sub) {
+    const tier = TIERS[index], next = TIERS[index + 1];
+    const el = document.createElement("div");
+    el.className = "tierup";
+    el.innerHTML = `<div class="rays"></div><div class="inner"><div class="small">TIER ${index + 1} UNLOCKED</div><div class="name"></div>${sub ? '<div class="sub"></div>' : ""}<div class="goal"></div></div>`;
+    const name = el.querySelector(".name");
+    [...tier.name].forEach((ch, i) => { const s = document.createElement("span"); s.textContent = ch; s.style.setProperty("--i", i); name.appendChild(s); });
+    if (sub) el.querySelector(".sub").textContent = sub;
+    el.querySelector(".goal").textContent = next ? `Next world: ${next.name} at ${next.min}` : "The final world. Keep it alive.";
+    el.onclick = () => el.remove();
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2100);
+  },
+
+  milestone(text, small) {
+    const el = document.createElement("div");
+    el.className = "milestone" + (small ? " note" : "");
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), small ? 3600 : 2200);
+  },
+
+  // Counts a number up from 0, slowing down as it arrives.
+  countUp(el, to, delay) {
+    el.textContent = to && !REDUCED ? 0 : to;
+    if (!to || REDUCED) return;
+    const dur = Math.min(1100, 300 + to * 45);
+    setTimeout(() => {
+      const t0 = performance.now();
+      const step = (now) => {
+        const k = Math.min(1, (now - t0) / dur);
+        el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, delay);
+  },
+
+  // The answer and explanation of a missed question, shown in the card until the player continues.
+  showReview({ q, timedOut, from, to, tier }) {
+    $("cr-title").textContent = timedOut ? "Time's up" : "Not quite";
+    if (q.html) $("cr-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
+    else $("cr-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+    this.put($("cr-exp"), q.explanation, q.html);
+    $("cr-back").textContent = from === to ? `You stay at ${to}, the start of ${tier.name}.` : `Back to ${to}, the start of ${tier.name}.`;
+    $("cr-id").textContent = q.ref ? "Question " + q.ref : "";
+    const box = $("cardreview");
+    box.classList.remove("hidden");
+    setTimeout(() => {
+      if (box.classList.contains("hidden")) return;
+      $("btn-continue").focus({ preventScroll: true });
+      box.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
+    }, 500);
+  },
+
+  dropCounter() { const num = $("counter-num"); num.classList.remove("in", "drop"); void num.offsetWidth; num.classList.add("drop"); },
+
+  showOver({ final, timedOut, isNewBest, q, peak, correct, answered }) {
+    $("card").style.opacity = 0;
+    setTimeout(() => {
+      this.show("over");
+      $("over-title").textContent = timedOut ? "Time's up" : "Run over";
+      $("over-acc").textContent = (answered ? Math.round((correct / answered) * 100) : 0) + "%";
+      $("over-acc-sub").textContent = `accuracy · ${correct} of ${answered}`;
+      this.countUp($("final"), final, 800);
+      $("newbest").classList.toggle("hidden", !isNewBest);
+      const best = Store.data.best, next = TIERS[Game.tierFor(final) + 1];
+      let msg;
+      if (isNewBest) msg = "That's your longest streak yet.";
+      else if (final === 0) msg = "Shake it off. The next one's yours.";
+      else if (next && next.min - final <= 2) msg = `So close: ${next.min - final} more would have reached ${next.name}.`;
+      else if (best > final) msg = `${best - final} short of your best. Go again.`;
+      else msg = "You matched your best. One more beats it.";
+      $("over-msg").textContent = msg;
+      $("over-best").textContent = best;
+      $("over-tier").textContent = TIERS[peak].name;
+      $("over-tier").style.color = TIERS[peak].colors.accent;
+      this.renderPath($("over-path"), peak, true);
+      this.put($("over-q"), (q.passage ? q.passage + " " : "") + q.question, q.html);
+      if (q.html) $("over-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
+      else $("over-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+      this.put($("over-exp"), q.explanation, q.html);
+      $("over-id").textContent = q.ref ? "Question " + q.ref : "";
+    }, 250);
+  },
+};
+
+/* ---------- wiring ---------- */
+function bindSeg(id, key, cast) {
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    Store.data[key] = cast ? cast(b.dataset.v) : b.dataset.v; Store.save(); UI.renderStart();
+  });
+}
+bindSeg("set-section", "section");
+bindSeg("set-seconds", "seconds", Number);
+$("set-timer").onclick = () => { Store.data.timer = !Store.data.timer; Store.save(); UI.renderStart(); };
+$("set-sound").onclick = () => { Store.data.muted = !Store.data.muted; Store.save(); UI.renderStart(); if (!Store.data.muted) { Sound.ensure(); Sound.ding(0); } };
+$("btn-mute").onclick = () => { Store.data.muted = !Store.data.muted; Store.save(); UI.renderMute(); };
+$("btn-start").onclick = () => { Sound.tap(); startRun(); };
+$("btn-again").onclick = () => { Sound.tap(); startRun(); };
+$("btn-continue").onclick = () => Game.resume();
+$("btn-menu").onclick = () => UI.show("start");
+$("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true; Game.reviewing = false; Visuals.setTier(0); UI.show("start"); };
+
+function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.best; Game.start(); }
+
+Highlighter.init();
+$("calc-close").onclick = () => { Calc.wanted = false; Calc.sync(); };
+$("calc-reset").onclick = () => Calc.reset();
+window.addEventListener("resize", () => Calc.layout());
+
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target && e.target.closest && e.target.closest("#calc")) return; // typing in the calculator is not an answer
+  const game = !$("screen-game").classList.contains("hidden");
+  const over = !$("screen-over").classList.contains("hidden");
+  const start = !$("screen-start").classList.contains("hidden");
+  if (game && Game.reviewing) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); Game.resume(); }
+  } else if (game) {
+    const i = "1234".indexOf(e.key) >= 0 ? "1234".indexOf(e.key) : "abcd".indexOf(e.key.toLowerCase());
+    if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.answer(i); }
+  } else if ((over || start) && e.key === "Enter") {
+    e.preventDefault(); startRun();
+  }
+});
+
+if (/[?&]selftest\b/.test(location.search)) window.SELFTEST = selfTest();
+
+$("build").textContent = "Version " + BUILD;
+(async function checkForUpdate() {
+  if (!location.protocol.startsWith("http")) return; // only matters on the hosted site
+  try {
+    const r = await fetch(location.pathname + "?fresh=" + Date.now(), { cache: "no-store" });
+    const m = /const BUILD = "([^"]+)"/.exec(await r.text());
+    if (!m || m[1] === BUILD) return;
+    window.NEWER_BUILD = m[1];
+    const want = "v=" + encodeURIComponent(m[1]);
+    if (location.search.includes(want)) return;       // already tried: don't loop
+    const go = () => location.replace(location.pathname + "?" + want);
+    if (!$("screen-start").classList.contains("hidden")) go(); // nothing in progress: just load it
+    else { $("build").textContent = "Version " + BUILD + " (update ready: tap)"; $("build").onclick = go; }
+  } catch (e) { /* offline or blocked: keep playing this copy */ }
+})();
+
+/* ---------- main loop ---------- */
+Visuals.setTier(0, true);
+UI.show("start");
+function connect() {
+  const p = CB.detect().then(() => { if (!$("screen-start").classList.contains("hidden")) UI.renderStart(); });
+  UI.renderStart();
+  return p;
+}
+$("btn-recheck").onclick = connect;
+$("btn-forget").onclick = () => {
+  if (!confirm("Forget which questions you have seen? Any of them can come up again.")) return;
+  Seen.reset(); UI.renderStart();
+};
+connect();
+let last = performance.now();
+function loop(now) {
+  Quality.sample(now - last);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  Visuals.frame(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
