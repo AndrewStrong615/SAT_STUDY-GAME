@@ -284,6 +284,27 @@ body.shake-hard #app { animation: shakeHard .5s; }
 .milestone { position: fixed; left: 50%; top: 18%; z-index: 35; transform: translateX(-50%); padding: 12px 22px; border-radius: 99px; font-family: var(--display); font-weight: 900; font-size: clamp(18px, 4vw, 26px); white-space: nowrap; background: rgba(10,12,20,.82); border: 1px solid var(--accent); box-shadow: 0 0 30px var(--glow); animation: mile 2.2s ease forwards; pointer-events: none; }
 @keyframes mile { 0% { opacity: 0; transform: translate(-50%, 20px) scale(.8); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } 80% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -20px); } }
 
+/* ---------- cross-out tool (answer choices) ---------- */
+.calcbtn + .calcbtn { margin-left: 0; }
+.calcbtn s { text-decoration-thickness: 2px; }
+.answer .t { flex: 1; }
+.answer .strike { display: none; flex: none; align-items: center; justify-content: center; min-width: 46px; height: 36px; margin: -4px -6px -4px 0; padding: 0 8px; border-radius: 10px; border: 1px solid var(--card-line); background: rgba(10, 12, 20, .45); color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+.answer .strike s { text-decoration-thickness: 2px; }
+.answers.elim .answer:not(:disabled) .strike, .answer.out:not(:disabled) .strike { display: inline-flex; }
+@media (hover: hover) { .answer .strike:hover { color: #fff; border-color: var(--accent); } }
+/* a crossed-out choice: struck through and dimmed; tapping it only brings it back */
+.answer.out:not(.right):not(.wrong) { border-style: dashed; background: rgba(255, 255, 255, .03); box-shadow: none; transform: none; }
+.answer.out:not(.right):not(.wrong) .t { opacity: .42; text-decoration: line-through; text-decoration-thickness: 2px; }
+.answer.out:not(.right):not(.wrong) .k { opacity: .42; background: rgba(255, 255, 255, .12); color: inherit; }
+
+/* ---------- highlighter (passages and questions) ---------- */
+.passage, .question { -webkit-user-select: text; user-select: text; }
+.passage ::selection, .question ::selection { background: rgba(255, 224, 102, .45); }
+mark.hl { background: #ffe066; color: #14161f; border-radius: 3px; padding: 1px 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer; }
+mark.hl:hover { background: #ffd23f; }
+.hlbtn { position: fixed; z-index: 26; display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 14px; font-weight: 800; padding: 9px 14px; border-radius: 99px; border: 0; background: #ffe066; color: #14161f; box-shadow: 0 8px 26px rgba(0, 0, 0, .5); cursor: pointer; transform: translateX(-50%); animation: fadeUp .16s ease-out; }
+.hlbtn:active { transform: translateX(-50%) scale(.95); }
+
 /* ---------- Desmos calculator split view (math questions only) ---------- */
 .calcbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; padding: 4px 11px 4px 8px; border-radius: 99px; border: 1px solid var(--accent); background: rgba(255, 255, 255, .06); color: var(--accent2); cursor: pointer; transition: background .2s, color .2s, transform .12s; }
 .calcbtn:active { transform: scale(.95); }
@@ -365,7 +386,8 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     </div>
     <button class="bigbtn" id="btn-start">Start streak</button>
     <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
-    <p class="howto">Answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or tap. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds.</p>
+    <p class="howto">Answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or tap. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
   </section>
 
   <!-- GAME SCREEN -->
@@ -416,6 +438,9 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     <button class="ghostbtn" id="btn-menu">Back to start</button>
   </section>
 </div>
+
+<!-- HIGHLIGHT BUTTON (appears next to selected text on touch screens) -->
+<button id="hl-btn" class="hlbtn hidden" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 01-2.8 0l-5.2-5.2a2 2 0 010-2.8L14 4"/></svg>Highlight</button>
 
 <!-- DESMOS CALCULATOR (opens beside math questions) -->
 <aside id="calc" class="calc hidden" aria-label="Desmos graphing calculator">
@@ -492,6 +517,11 @@ const TIERS = [
     ui: { burst: true, glowBorder: true, fireCounter: true }, difficulty: [0.05, 0.25, 0.7] },
 ];
 
+/* The version of this page, shown at the bottom of the start screen. Raise it
+   with every change. The hosted site lets browsers keep an old copy for a
+   while, so on the web the page looks for a newer copy of itself and loads it. */
+const BUILD = "8";
+
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
    If you get your own free key at https://www.desmos.com/my-api and paste it
@@ -507,7 +537,7 @@ const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Abs
    ===================================================================== */
 const STORE_KEY = "satStreak.v1";
 const Store = {
-  data: { best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false },
+  data: { best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false },
   load() {
     try { Object.assign(this.data, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch (e) { /* private mode: no saving */ }
   },
@@ -707,38 +737,53 @@ function sanitize(html) {
 }
 
 /* Display fixes for fetched question HTML:
-   1. Text written only for screen readers (such as the word "blank" after each
-      ______) is kept for screen readers but no longer shown.
+   1. Each blank comes with the word "blank" for screen readers. However that
+      word is written (in a hidden element, in a plain element, or as loose
+      text), it must not be printed after the line. The text is read in order,
+      and a "blank" that directly follows a drawn blank is hidden or removed.
    2. <mfenced>, an old way of writing brackets in math, is not drawn by current
       browsers, which made brackets vanish: (x + 2)(x - 3) showed as x + 2x - 3.
       It is rewritten into brackets every browser draws. */
-const SR_CLASS = /(^|[\s_-])(sr-only|sronly|visually-?hidden|screen-?reader\S*|offscreen|a11y-hidden)([\s_-]|$)/i;
+const SR_CLASS = /(^|[\s_-])(sr-only|sronly|sr|visually-?hidden|visuallyhidden|screen-?reader\S*|offscreen|a11y\S*|assistive\S*|hidden-visually)([\s_-]|$)/i;
+const GAP_CLASS = /(^|[\s_-])(blank|gap|underline|fill\S*)([\s_-]|$)/i;
+const LINE = "(?:[_\\uFF3F\\u2017\\u23AF]{2,}|\\u2014{3,})"; // a drawn blank: ____ and its look-alikes
+const LINE_END = new RegExp(LINE + "[\\s\\u00a0]*$");
+const LINE_THEN_WORD = new RegExp("(" + LINE + ")[\\s\\u00a0]*blank\\b", "gi");
+const WORD_FIRST = /^([\s ]*)blank\b/i, WORD_ONLY = /^[\s ]*blank[\s .]*$/i;
 function tidy(root, doc) {
-  const isBlankWord = (el) => /^\s*blank\s*$/i.test(el.textContent);
-  // Is there already a visible blank (underscores, or something hidden from screen readers) right before el?
-  const lineBefore = (el) => {
-    let n = el.previousSibling;
-    while (n && n.nodeType === 3 && !n.nodeValue.trim()) n = n.previousSibling;
-    if (!n) return false;
-    return /_{3,}\s*$/.test(n.textContent) || (n.nodeType === 1 && n.getAttribute("aria-hidden") === "true");
-  };
-  for (const el of Array.from(root.querySelectorAll("[class]"))) {
-    if (!SR_CLASS.test(el.getAttribute("class"))) continue;
-    el.setAttribute("class", "sr-only");
-    if (isBlankWord(el) && !lineBefore(el)) { // the hidden word was the only sign of the blank: draw one
-      const line = doc.createElement("span");
-      line.className = "blank"; line.setAttribute("aria-hidden", "true"); line.textContent = "______";
-      el.before(line);
+  const hide = (el) => el.setAttribute("class", "sr-only");
+  const empty = (el) => !el.textContent.trim() && !el.querySelector("img, svg, math");
+  // An element that stands for the blank without containing underscores (an empty underlined box).
+  const isGap = (el) => empty(el) && (/^(U|INS)$/.test(el.tagName) || el.getAttribute("aria-hidden") === "true" ||
+    GAP_CLASS.test(el.getAttribute("class") || "") || /underline|border-bottom/i.test(el.getAttribute("style") || ""));
+  for (const el of Array.from(root.querySelectorAll("[class]"))) if (SR_CLASS.test(el.getAttribute("class"))) hide(el);
+
+  const nodes = [], walker = doc.createTreeWalker(root, 5 /* elements and text */);
+  for (let n; (n = walker.nextNode()); ) nodes.push(n);
+  let after = false; // true while the last thing shown was a blank
+  for (const n of nodes) {
+    if (!n.isConnected && !root.contains(n)) continue;
+    if (n.nodeType === 1) { if (isGap(n)) after = true; continue; }
+    const el = n.parentElement;
+    if (el.closest("math, svg")) { after = false; continue; }
+    if (!n.nodeValue.trim()) continue;
+    const hidden = el.closest(".sr-only");
+    if (hidden) {
+      if (WORD_ONLY.test(hidden.textContent) && !after) { // the hidden word is the only sign of the blank: draw one
+        const line = doc.createElement("span");
+        line.className = "blank"; line.setAttribute("aria-hidden", "true"); line.textContent = "______";
+        hidden.before(line);
+      }
+      after = false;
+      continue;
     }
-  }
-  // The same word without a recognizable class: hide it when it directly follows a blank.
-  for (const el of Array.from(root.querySelectorAll("span, em, i, b, strong, u, small"))) {
-    if (!el.children.length && isBlankWord(el) && lineBefore(el)) el.setAttribute("class", "sr-only");
-  }
-  // ...and when it is plain text glued to the underscores.
-  const walker = doc.createTreeWalker(root, 4 /* text nodes */);
-  for (let n; (n = walker.nextNode()); ) {
-    if (/_{3,}\s*blank\b/i.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/(_{3,})\s*blank\b/gi, "$1");
+    let v = n.nodeValue.replace(LINE_THEN_WORD, "$1"); // "______ blank" inside one piece of text
+    if (after && WORD_FIRST.test(v)) {
+      if (el !== root && WORD_ONLY.test(el.textContent)) { hide(el); after = false; continue; } // <span>blank</span>
+      v = v.replace(WORD_FIRST, "$1");                                                           // loose text
+    }
+    if (v !== n.nodeValue) n.nodeValue = v;
+    if (v.trim()) after = LINE_END.test(v);
   }
   // Brackets in math.
   const M = "http://www.w3.org/1998/Math/MathML";
@@ -777,6 +822,11 @@ function selfTest() {
     ["blank: hidden word alone still draws a line", text(sanitize('<p>It was <span class="sr-only">blank</span> then.</p>')) === "It was ______ then."],
     ["blank: bare word after underscores is not shown", text(sanitize("<p>It was ______<span>blank</span> then.</p>")) === "It was ______ then."],
     ["blank: plain text ______blank loses the word", text(sanitize("<p>It was ______ blank then.</p>")) === "It was ______ then."],
+    ["blank: loose word after an underscore element", text(sanitize("<p>It was <span>______</span>blank then.</p>")) === "It was ______ then."],
+    ["blank: nested element after the line", text(sanitize('<p>It was <u>______</u> <span><b>Blank</b></span> then.</p>')) === "It was ______ then."],
+    ["blank: unknown hidden class after the line", text(sanitize('<p>It was <span>______</span><span class="qti-hidden">blank</span> then.</p>')) === "It was ______ then."],
+    ["blank: empty underlined box then the word", text(sanitize('<p>It was <span class="blank-line"></span><span>blank</span> then.</p>')) === "It was then."],
+    ["blank: two blanks in one sentence", text(sanitize('<p>A ______<span class="sr-only">blank</span> and B ______ blank end.</p>')) === "A ______ and B ______ end."],
     ["blank: the ordinary word blank is left alone", text(sanitize("<p>She left the page blank.</p>")) === "She left the page blank."],
     ["math: brackets are kept", text(sanitize("<math><mfenced><mrow><mi>x</mi><mo>+</mo><mn>2</mn></mrow></mfenced><mfenced><mn>3</mn><mn>4</mn></mfenced></math>")) === "(x+2)(3,4)"],
     ["math: custom brackets are kept", text(sanitize('<math><mfenced open="[" close="]" separators=";"><mn>1</mn><mn>2</mn></mfenced></math>')) === "[1;2]"],
@@ -798,7 +848,7 @@ function selfTest() {
   const box = document.createElement("pre");
   box.id = "selftest";
   box.style.cssText = "position:fixed;inset:0;z-index:99;margin:0;padding:20px;overflow:auto;background:#0b0d16;color:#e8ecff;font:14px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap";
-  box.textContent = (failed.length ? failed.length + " of " + checks.length + " checks FAILED" : "All " + checks.length + " checks passed") + "\n\n" + checks.map(([name, ok]) => (ok ? "ok    " : "FAIL  ") + name).join("\n");
+  box.textContent = (failed.length ? failed.length + " of " + checks.length + " checks FAILED" : "All " + checks.length + " checks passed") + "  (version " + BUILD + ")\n\n" + checks.map(([name, ok]) => (ok ? "ok    " : "FAIL  ") + name).join("\n");
   document.body.appendChild(box);
   return { total: checks.length, failed: failed.map(([name]) => name) };
 }
@@ -1449,6 +1499,7 @@ const Game = {
 
   answer(displayIndex) {
     if (this.locked || !this.current) return;
+    if (UI.isOut(displayIndex)) return; // crossed out: bring it back first
     const letter = "ABCD"[this.order[displayIndex]];
     if (letter === this.current.answer) this.hit(displayIndex); else this.miss(displayIndex, false);
   },
@@ -1517,8 +1568,102 @@ const Game = {
    7. UI
    ===================================================================== */
 const $ = (id) => document.getElementById(id);
+/* The highlighter. Select text in the passage or the question to mark it
+   yellow; tap a highlight to remove it. With a mouse the highlight is made as
+   soon as you let go. On a touch screen a "Highlight" button appears next to
+   the selection, because there you keep adjusting the selection handles.
+   Highlights live in the question's own HTML, so the next question starts clean. */
+const Highlighter = {
+  range: null, group: 0,
+  areas() { return [$("passage"), $("question")]; },
+  // The current selection, if it covers text inside the passage or question.
+  current() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount || !sel.toString().trim()) return null;
+    const range = sel.getRangeAt(0);
+    return this.areas().some((a) => !a.classList.contains("hidden") && range.intersectsNode(a)) ? range : null;
+  },
+  // Wrap every piece of text the range covers (inside the two areas) in a <mark>.
+  apply(range) {
+    if (!range) return 0;
+    const g = String(++this.group), jobs = [];
+    for (const area of this.areas()) {
+      if (area.classList.contains("hidden") || !range.intersectsNode(area)) continue;
+      const walker = document.createTreeWalker(area, NodeFilter.SHOW_TEXT);
+      for (let n; (n = walker.nextNode()); ) {
+        if (!n.nodeValue.trim() || !range.intersectsNode(n)) continue;
+        if (n.parentElement.closest("mark.hl, math, svg, .sr-only, button")) continue; // already marked, or not plain text
+        const start = n === range.startContainer ? range.startOffset : 0;
+        const end = n === range.endContainer ? range.endOffset : n.nodeValue.length;
+        if (end > start && n.nodeValue.slice(start, end).trim()) jobs.push([n, start, end]);
+      }
+    }
+    for (const [n, start, end] of jobs) {
+      const piece = n.splitText(start);
+      piece.splitText(end - start);
+      const mark = document.createElement("mark");
+      mark.className = "hl"; mark.dataset.g = g; mark.title = "Tap to remove this highlight";
+      piece.replaceWith(mark); mark.appendChild(piece);
+    }
+    for (const area of this.areas()) area.normalize(); // drop the empty text nodes that splitting leaves behind
+    window.getSelection().removeAllRanges();
+    this.hideButton();
+    return jobs.length;
+  },
+  // Remove one highlight (every piece made by the same selection).
+  remove(mark) {
+    for (const area of this.areas()) {
+      for (const m of Array.from(area.querySelectorAll('mark.hl[data-g="' + mark.dataset.g + '"]'))) {
+        const parent = m.parentNode;
+        m.replaceWith(...m.childNodes);
+        parent.normalize();
+      }
+    }
+  },
+  showButton(range) {
+    const r = range.getBoundingClientRect(), b = $("hl-btn");
+    if (!r.width && !r.height) return this.hideButton();
+    this.range = range.cloneRange();
+    b.classList.remove("hidden");
+    // below the selection, clear of the phone's own copy menu; above it if there is no room
+    const top = r.bottom + 14 + 44 < innerHeight ? r.bottom + 14 : Math.max(8, r.top - 54);
+    b.style.top = top + "px";
+    b.style.left = Math.min(innerWidth - 70, Math.max(70, r.left + r.width / 2)) + "px";
+  },
+  hideButton() { this.range = null; $("hl-btn").classList.add("hidden"); },
+  init() {
+    let lastPointer = "mouse";
+    document.addEventListener("pointerdown", (e) => { lastPointer = e.pointerType || "mouse"; }, true);
+    // mouse: highlight on release
+    document.addEventListener("mouseup", (e) => {
+      if (lastPointer !== "mouse" || e.target.closest("#hl-btn")) return;
+      setTimeout(() => this.apply(this.current()), 0); // let the browser finish updating the selection
+    });
+    // touch and pen: offer the button while there is a selection
+    document.addEventListener("selectionchange", () => {
+      if (lastPointer === "mouse") return;
+      const range = this.current();
+      if (range) this.showButton(range); else if (document.activeElement !== $("hl-btn")) this.hideButton();
+    });
+    const b = $("hl-btn");
+    // Act on the press itself: a tap elsewhere would drop the selection before a click arrives.
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); this.apply(this.current() || this.range); });
+    b.addEventListener("click", () => this.apply(this.current() || this.range)); // keyboard
+    // tap a highlight to remove it
+    for (const area of this.areas()) {
+      area.addEventListener("click", (e) => {
+        const mark = e.target.closest && e.target.closest("mark.hl");
+        const sel = window.getSelection();
+        if (mark && (!sel || sel.isCollapsed)) this.remove(mark);
+      });
+    }
+  },
+};
+
 /* The split view: Desmos on one half of the screen, the question on the other.
-   It only shows while a math question is up, and it remembers that you want it. */
+   It opens only when its button is tapped. It stays open while math questions
+   keep coming, and closes (without coming back by itself) on a Reading &
+   Writing question, when the run ends, or when you close it. */
 const Calc = {
   wanted: false, built: false, api: null,
   isMath(q) { return !!q && q.section === "Math"; },
@@ -1530,6 +1675,7 @@ const Calc = {
   sync() {
     const onGame = !$("screen-game").classList.contains("hidden");
     const open = this.wanted && onGame && this.isMath(Game.current);
+    if (!open) this.wanted = false; // once it closes, only a tap on the button opens it again
     if (open && !this.built) this.build();
     $("calc").classList.toggle("hidden", !open);
     document.body.classList.toggle("calc-open", open);
@@ -1687,6 +1833,7 @@ const UI = {
     $("card").style.opacity = 1;
     $("qmeta").innerHTML = ""; $("passage").classList.add("hidden");
     $("answers").innerHTML = ""; $("answers").classList.remove("done");
+    Highlighter.hideButton();
   },
 
   noQuestion() {
@@ -1710,6 +1857,20 @@ const UI = {
       const span = document.createElement("span"); span.className = "chip " + cls; span.textContent = txt; $("qmeta").appendChild(span);
     }
     if (q.source) { const span = document.createElement("span"); span.className = "chip"; span.textContent = q.source; $("qmeta").appendChild(span); }
+    { // the cross-out tool: turn it on, then cross out choices you have ruled out
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "calcbtn"; b.id = "btn-elim";
+      b.setAttribute("aria-label", "Cross-out tool: show or hide the cross-out buttons beside each choice");
+      b.setAttribute("aria-pressed", String(!!Store.data.crossOut));
+      b.innerHTML = "<s>ABC</s>";
+      b.onclick = () => {
+        Sound.tap();
+        Store.data.crossOut = !Store.data.crossOut; Store.save();
+        b.setAttribute("aria-pressed", String(Store.data.crossOut));
+        $("answers").classList.toggle("elim", Store.data.crossOut);
+      };
+      $("qmeta").appendChild(b);
+    }
     if (Calc.isMath(q)) { // math questions get a button that opens Desmos beside the question
       const b = document.createElement("button");
       b.type = "button"; b.className = "calcbtn"; b.id = "btn-calc";
@@ -1727,13 +1888,36 @@ const UI = {
       const b = document.createElement("button");
       b.className = "answer";
       b.style.setProperty("--i", i);
-      b.innerHTML = `<span class="k">${q.html ? "ABCD"[i] : i + 1}</span><span class="t"></span>`;
+      const label = q.html ? "ABCD"[i] : i + 1;
+      b.innerHTML = `<span class="k">${label}</span><span class="t"></span><span class="strike" role="button" aria-label="Cross out choice ${label}"><s>${label}</s></span>`;
       this.put(b.querySelector(".t"), q.choices[orig], q.html);
-      b.onclick = () => Game.answer(i);
+      // Tapping the cross-out control never answers. Tapping a crossed-out choice only brings it back.
+      b.querySelector(".strike").addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); this.strike(i); });
+      b.onclick = (e) => {
+        if (e.target.closest && e.target.closest(".strike")) return;
+        if (b.classList.contains("out")) { this.strike(i, false); return; }
+        Game.answer(i);
+      };
       box.appendChild(b);
     });
+    box.classList.toggle("elim", !!Store.data.crossOut);
     const card = $("card");
     void card.offsetWidth; card.classList.add("in"); // replays the slide-in for every new question
+  },
+
+  isOut(i) { const b = $("answers").children[i]; return !!b && b.classList.contains("out"); },
+
+  // Cross out choice i, or bring it back. `on` forces one or the other.
+  strike(i, on) {
+    const b = $("answers").children[i];
+    if (!b || b.disabled) return;
+    const out = b.classList.toggle("out", on);
+    const k = b.querySelector(".k").textContent, ctl = b.querySelector(".strike");
+    ctl.innerHTML = out ? "Undo" : "<s></s>";
+    if (!out) ctl.firstChild.textContent = k;
+    ctl.setAttribute("aria-label", (out ? "Bring back choice " : "Cross out choice ") + k);
+    if (out) b.setAttribute("aria-label", "Choice " + k + ", crossed out. Activate to bring it back."); else b.removeAttribute("aria-label");
+    Sound.tap();
   },
 
   lockAnswers() {
@@ -1861,6 +2045,7 @@ $("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true;
 
 function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.best; Game.start(); }
 
+Highlighter.init();
 $("calc-close").onclick = () => { Calc.wanted = false; Calc.sync(); };
 $("calc-reset").onclick = () => Calc.reset();
 window.addEventListener("resize", () => Calc.layout());
@@ -1880,6 +2065,22 @@ document.addEventListener("keydown", (e) => {
 });
 
 if (/[?&]selftest\b/.test(location.search)) window.SELFTEST = selfTest();
+
+$("build").textContent = "Version " + BUILD;
+(async function checkForUpdate() {
+  if (!location.protocol.startsWith("http")) return; // only matters on the hosted site
+  try {
+    const r = await fetch(location.pathname + "?fresh=" + Date.now(), { cache: "no-store" });
+    const m = /const BUILD = "([^"]+)"/.exec(await r.text());
+    if (!m || m[1] === BUILD) return;
+    window.NEWER_BUILD = m[1];
+    const want = "v=" + encodeURIComponent(m[1]);
+    if (location.search.includes(want)) return;       // already tried: don't loop
+    const go = () => location.replace(location.pathname + "?" + want);
+    if (!$("screen-start").classList.contains("hidden")) go(); // nothing in progress: just load it
+    else { $("build").textContent = "Version " + BUILD + " (update ready: tap)"; $("build").onclick = go; }
+  } catch (e) { /* offline or blocked: keep playing this copy */ }
+})();
 
 /* ---------- main loop ---------- */
 Visuals.setTier(0, true);

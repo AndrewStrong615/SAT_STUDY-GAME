@@ -63,8 +63,9 @@ is 1 (easy), 2 (medium) or 3 (hard).
 
 College Board's replies are cleaned up before they are shown:
 
-- Each blank arrives with a hidden word "blank" meant for screen readers. It
-  stays available to screen readers but is no longer printed after the line.
+- Each blank arrives with the word "blank" meant for screen readers. However it
+  is written (hidden element, plain element or loose text), a "blank" that
+  directly follows a drawn blank is no longer printed.
 - Brackets in math written the old `<mfenced>` way are not drawn by current
   browsers, so `(x + 2)(x - 3)` used to show as `x + 2x - 3`. They are
   rewritten so every browser draws them.
@@ -72,16 +73,34 @@ College Board's replies are cleaned up before they are shown:
   explanation all point at the same choice. Anything unclear is skipped, as are
   typed-answer questions and questions without exactly four choices.
 
-Open `index.html?selftest` to run 20 made-up sample replies through this code
+Open `index.html?selftest` to run 25 made-up sample replies through this code
 and see a pass or fail for each. The game-over card shows a question number, so
 a question that still looks wrong can be reported.
+
+## Test tools
+
+- **Highlighter:** select text in a passage or question to mark it yellow. With
+  a mouse it is marked as soon as you let go; on a touch screen a Highlight
+  button appears next to the selection. Tap a highlight to remove it. The next
+  question starts clean.
+- **Cross-out:** the ~~ABC~~ button shows a small control beside each choice.
+  Use it to cross out choices you have ruled out. A crossed-out choice cannot
+  be picked by tap or key; tapping it (or Undo) brings it back.
+
+## Versions
+
+The start screen shows a version number at the bottom (`BUILD` in the script;
+raise it with every change). The hosted site lets browsers keep an old copy of
+the page for a few minutes, so on the web the page checks for a newer copy of
+itself and loads it.
 
 ## The Desmos calculator
 
 Math questions show a **Desmos** button. It splits the screen: the Desmos
 graphing calculator on one half and the question on the other (side by side on
-a laptop, stacked on a phone). It stays out of the way on Reading & Writing
-questions and comes back on the next math question.
+a laptop, stacked on a phone). It opens only when you tap the button. It stays
+open while math questions keep coming, and closes on a Reading & Writing
+question or when the run ends.
 
 Out of the box the panel shows the Desmos website in a frame, so there is
 nothing to set up. If you would rather have the calculator built into the page,
