@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SAT Racer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🏁 SAT Racer</div>
+    <div class="wallet" title="Prize money"><span class="coin">$</span><span id="money">0</span></div>
+  </header>
+
+  <!-- MENU -->
+  <main id="screen-menu" class="screen active">
+    <section class="hero">
+      <h1>Race on what you know.</h1>
+      <p>Answer SAT questions to drive. Every correct answer is a burst of speed, streaks fire your nitro, and misses send you spinning. Win races to earn cash and buy faster cars.</p>
+    </section>
+
+    <section class="card setup">
+      <h2>Race setup</h2>
+      <div class="field">
+        <label>Section</label>
+        <div class="seg" data-name="section">
+          <button data-value="both" class="on">Both</button>
+          <button data-value="math">Math</button>
+          <button data-value="rw">Reading &amp; Writing</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Question difficulty</label>
+        <div class="seg" data-name="difficulty">
+          <button data-value="any" class="on">Any</button>
+          <button data-value="E">Easy</button>
+          <button data-value="M">Medium</button>
+          <button data-value="H">Hard</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Race length</label>
+        <div class="seg" data-name="length">
+          <button data-value="5">5 questions</button>
+          <button data-value="10" class="on">10 questions</button>
+          <button data-value="15">15 questions</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>League</label>
+        <div class="seg" data-name="league" id="league-seg"></div>
+        <p class="hint" id="league-hint"></p>
+      </div>
+      <div class="field">
+        <label>Questions from</label>
+        <div class="seg" data-name="source" id="source-seg">
+          <button data-value="auto" class="on">Best available</button>
+          <button data-value="live">College Board (live)</button>
+          <button data-value="bank">Downloaded bank</button>
+          <button data-value="builtin">Built-in practice</button>
+        </div>
+        <p class="hint" id="source-hint">Checking question sources…</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary big" id="btn-start">Start race</button>
+        <button class="btn" id="btn-garage">Garage &amp; shop</button>
+      </div>
+    </section>
+
+    <section class="card stats" id="career"></section>
+  </main>
+
+  <!-- GARAGE -->
+  <main id="screen-garage" class="screen">
+    <div class="screen-head">
+      <h2>Garage &amp; shop</h2>
+      <button class="btn" data-goto="menu">Back</button>
+    </div>
+    <p class="hint">Power is how far a correct answer carries you. Grip is how much ground you keep after a miss. Nitro is the extra boost each answer in a streak adds.</p>
+    <div class="cars" id="car-list"></div>
+  </main>
+
+  <!-- RACE -->
+  <main id="screen-race" class="screen">
+    <div class="hud">
+      <div><span class="hud-label">Place</span><span id="hud-place" class="hud-big">1st</span></div>
+      <div><span class="hud-label">Question</span><span id="hud-q" class="hud-big">1/10</span></div>
+      <div><span class="hud-label">Streak</span><span id="hud-streak" class="hud-big">0</span></div>
+      <div><span class="hud-label">Accuracy</span><span id="hud-acc" class="hud-big">–</span></div>
+      <button class="btn small" id="btn-quit">Quit</button>
+    </div>
+    <div class="track-wrap">
+      <canvas id="track" width="1200" height="300"></canvas>
+      <div class="flash" id="flash"></div>
+    </div>
+    <section class="qpanel card" id="qpanel">
+      <div class="qmeta" id="qmeta"></div>
+      <div class="stimulus" id="q-stimulus"></div>
+      <div class="stem" id="q-stem"></div>
+      <div class="choices" id="q-choices"></div>
+      <form class="spr" id="q-spr" autocomplete="off">
+        <input id="q-spr-input" type="text" inputmode="decimal" placeholder="Type your answer (e.g. 7, 3/4, 0.75)">
+        <button class="btn primary" type="submit">Submit</button>
+      </form>
+      <div class="feedback" id="q-feedback"></div>
+    </section>
+  </main>
+
+  <!-- RESULTS -->
+  <main id="screen-results" class="screen">
+    <section class="card results">
+      <div class="podium" id="podium"></div>
+      <h2 id="result-title"></h2>
+      <p id="result-sub"></p>
+      <div class="payout" id="payout"></div>
+      <div class="actions">
+        <button class="btn primary big" id="btn-again">Race again</button>
+        <button class="btn" id="btn-results-garage">Garage &amp; shop</button>
+        <button class="btn" data-goto="menu">Menu</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Review your answers</h2>
+      <div id="review"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    College Board questions are © College Board and are loaded from the public
+    <a href="https://satsuitequestionbank.collegeboard.org/" target="_blank" rel="noopener">SAT Suite Question Bank</a>
+    for personal study. This game is not affiliated with or endorsed by College Board. SAT is a trademark of College Board.
+  </footer>
+
+  <script src="data/sample-questions.js"></script>
+  <script src="data/cars.js"></script>
+  <!-- Created on your computer by scripts/fetch-questions.mjs; missing is fine. -->
+  <script src="data/cb-bank.js" onerror="window.CB_BANK = window.CB_BANK || null"></script>
+  <script src="js/questions.js"></script>
+  <script src="js/race.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

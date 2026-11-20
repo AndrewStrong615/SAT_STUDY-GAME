@@ -1,0 +1,5 @@
+# College Board questions downloaded by scripts/fetch-questions.mjs.
+# They belong to College Board: keep them local, don't commit them.
+data/cb-bank.js
+node_modules/
+.DS_Store

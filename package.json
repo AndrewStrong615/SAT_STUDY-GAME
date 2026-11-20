@@ -1,0 +1,12 @@
+{
+  "name": "sat-racer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Race cars by answering SAT questions.",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "fetch-questions": "node scripts/fetch-questions.mjs"
+  },
+  "engines": { "node": ">=18" }
+}
