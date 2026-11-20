@@ -205,7 +205,7 @@
     const c = $('track');
     const w = c.parentElement.clientWidth;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const h = Math.max(220, Math.min(300, w * 0.32));
+    const h = Math.max(170, Math.min(300, w * 0.32));
     c.style.height = h + 'px';
     c.width = Math.round(w * dpr);
     c.height = Math.round(h * dpr);
@@ -316,7 +316,9 @@
     $('btn-next').onclick = nextQuestion;
     setTimeout(() => { updateHud(); }, 2300);
     updateHud();
-    fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Keep the "next" button reachable without scrolling the pinned track away.
+    const r = fb.getBoundingClientRect();
+    if (r.bottom > window.innerHeight) window.scrollBy({ top: Math.min(r.bottom - window.innerHeight + 16, r.top - 300), behavior: 'smooth' });
   }
 
   function flash(good) {

@@ -84,7 +84,8 @@ h1, h2, h3 { line-height: 1.2; margin: 0 0 .5em; }
 .hud-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .hud-big { font-size: 1.4rem; font-weight: 800; }
 .hud .btn { margin-left: auto; }
-.track-wrap { position: relative; margin-top: 12px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
+/* track stays pinned under the top bar so you can watch the race while scrolling the question */
+.track-wrap { position: sticky; top: 58px; z-index: 3; box-shadow: 0 8px 20px #0008; margin-top: 12px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
 #track { display: block; width: 100%; height: 260px; }
 .flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .flash.good { background: radial-gradient(circle at 40% 60%, #22c55e55, transparent 60%); }
