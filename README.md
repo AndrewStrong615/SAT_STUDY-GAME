@@ -1,16 +1,24 @@
 # SAT Streak
 
-A one-file SAT study game. Answer real SAT questions in a row without missing.
+A one-file SAT study game. Answer real SAT questions in a row.
 Every right answer adds 1 to your streak, and the longer the streak, the more
 epic the world gets: Spark, Flame, Ocean, Storm, Galaxy, Supernova, Legendary.
-One wrong answer shatters the streak and drops you back to tier 1.
+
+**The rules.** Each level is a checkpoint. A wrong answer (or running out of
+time) shows you the right answer and the explanation, then sends you back to
+the start of the level you are in: miss at 13 in Ocean and you are back at 10,
+not at 0. In the last level, Legendary, you play until your first miss. That
+miss ends the run, and the end screen shows your accuracy over the whole run
+(right answers out of all questions answered). The same count is shown under
+the streak number while you play.
 
 ## Play
 
 Open `index.html` in any browser while you're online. There is nothing to
 install or build.
 
-- Tap an answer or press `1`–`4` (or `A`–`D`). `Enter` starts a new streak.
+- Tap an answer or press `1`–`4` (or `A`–`D`). `Enter` continues after a miss, and starts a new run from the start or end
+  screen.
 - Settings on the start screen: Mixed / Math / Reading & Writing, an optional
   timer (20, 40 or 75 seconds), and sound.
 - Your best streak and highest tier are saved in your browser.

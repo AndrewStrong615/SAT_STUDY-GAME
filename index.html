@@ -264,6 +264,12 @@ body.shake-hard #app { animation: shakeHard .5s; }
 .statline span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
 .over .path { margin: 4px 0 6px; }
 .review { text-align: left; background: rgba(255,255,255,.06); border-radius: 16px; padding: 14px 16px; margin-top: 8px; border-left: 3px solid var(--good); }
+.cardreview { margin-top: 16px; border-left-color: var(--bad); animation: fadeUp .35s ease-out backwards; }
+.cardreview .exp.rich { max-height: none; }
+.cardreview .back { margin: 12px 0 0; font-weight: 800; color: var(--accent2); }
+.cardreview .bigbtn { margin-top: 12px; }
+.num.drop { animation: numDrop .6s ease-out; }
+@keyframes numDrop { 0% { transform: translateY(-40%) scale(1.25); color: var(--bad); } 60% { transform: translateY(6%) scale(.94); color: var(--bad); } 100% { transform: none; } }
 .review h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .review .q { color: var(--muted); font-size: 15px; margin: 0 0 8px; }
 .review .ans { font-weight: 700; color: var(--good); margin: 0 0 6px; }
@@ -349,7 +355,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
   <!-- START SCREEN -->
   <section id="screen-start" class="start">
     <h1 class="logo">SAT <span>STREAK</span></h1>
-    <p class="tag">Answer real SAT questions in a row. Every right answer grows your streak and powers up the world. One miss and it all shatters.</p>
+    <p class="tag">Answer real SAT questions in a row. Every right answer grows your streak and powers up the world. A miss sends you back to the start of your level. Reach Legendary and play until you miss.</p>
     <div class="records">
       <div class="record glass"><b id="best">0</b><span>Best streak</span></div>
       <div class="record glass"><b id="besttier">Spark</b><span>Highest tier</span></div>
@@ -403,7 +409,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     <div class="counterwrap">
       <div class="halo" id="halo"></div>
       <div class="counter" id="counter" aria-live="polite"><span class="num" id="counter-num">0</span></div>
-      <div class="counterlabel">streak</div>
+      <div class="counterlabel" id="counterlabel">streak</div>
     </div>
     <div class="progress">
       <div class="ptrack"><div class="pfill" id="pfill"></div><div class="pticks" id="pticks"></div></div>
@@ -415,6 +421,14 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div class="passage hidden" id="passage"></div>
       <div class="question" id="question"></div>
       <div class="answers" id="answers"></div>
+      <div class="review cardreview hidden" id="cardreview">
+        <h3 id="cr-title">Not quite</h3>
+        <p class="ans" id="cr-ans"></p>
+        <div class="exp" id="cr-exp"></div>
+        <p class="back" id="cr-back"></p>
+        <p class="qid" id="cr-id"></p>
+        <button class="bigbtn" id="btn-continue" type="button">Continue</button>
+      </div>
     </article>
   </section>
 
@@ -426,6 +440,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     <div id="newbest" class="newbest hidden">NEW BEST!</div>
     <p class="overmsg" id="over-msg"></p>
     <div class="statline">
+      <div><b id="over-acc">0%</b><span id="over-acc-sub">accuracy</span></div>
       <div><b id="over-best">0</b><span>best ever</span></div>
       <div><b id="over-tier">Spark</b><span>tier reached</span></div>
     </div>
@@ -437,7 +452,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div class="exp" id="over-exp"></div>
       <p class="qid" id="over-id"></p>
     </div>
-    <button class="bigbtn" id="btn-again">Start new streak</button>
+    <button class="bigbtn" id="btn-again">Play again</button>
     <button class="ghostbtn" id="btn-menu">Back to start</button>
   </section>
 </div>
@@ -523,7 +538,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "10";
+const BUILD = "11";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -1495,6 +1510,8 @@ const Sound = {
    ===================================================================== */
 const Game = {
   streak: 0, tierIndex: 0, peakTierThisRun: 0, used: new Set(), current: null, order: null,
+  correct: 0, answered: 0,  // counted over the whole run, for the accuracy shown at the end
+  reviewing: false,         // true while the explanation of a missed question is on screen
   locked: false, timerId: null, timeLeft: 0,
 
   tierFor(streak) { let i = 0; TIERS.forEach((t, k) => { if (streak >= t.min) i = k; }); return i; },
@@ -1521,6 +1538,7 @@ const Game = {
   start() {
     Sound.ensure();
     this.streak = 0; this.tierIndex = 0; this.peakTierThisRun = 0; this.used.clear(); this.current = null;
+    this.correct = 0; this.answered = 0; this.reviewing = false;
     this.run = (this.run || 0) + 1;
     CB.reset();
     Visuals.setTier(0);
@@ -1575,7 +1593,7 @@ const Game = {
     this.locked = true;
     if (this.current.source === "College Board") Seen.answered(this.current.ref, true);
     clearInterval(this.timerId);
-    this.streak++;
+    this.streak++; this.correct++; this.answered++;
     UI.markRight(displayIndex);
     Sound.ding(this.streak);
     UI.buzz(12);
@@ -1611,25 +1629,56 @@ const Game = {
     setTimeout(() => this.next(), tieredUp ? 1050 : 560);
   },
 
+  /* A miss. Below the last level it is a checkpoint: you see the answer and the
+     explanation, drop back to the start of the level you are in, and carry on.
+     In the last level the first miss ends the run. */
   miss(displayIndex, timedOut) {
     if (this.locked) return;
     this.locked = true;
     if (this.current.source === "College Board") Seen.answered(this.current.ref, false); // comes back first once everything has been seen
     clearInterval(this.timerId);
+    this.answered++;
     const correctDisplay = this.order.indexOf("ABCD".indexOf(this.current.answer));
     UI.markWrong(displayIndex, correctDisplay);
     Sound.break();
     UI.buzz([40, 50, 90]);
     UI.shake(true);
     Visuals.flash("#ff2b40", 0.38, 600);
+    const run = this.run, tier = TIERS[this.tierIndex];
+    if (this.tierIndex < TIERS.length - 1) {
+      const from = this.streak;
+      this.reviewing = true;
+      UI.showReview({ q: this.current, timedOut, from, to: tier.min, tier });
+      setTimeout(() => {
+        if (run !== this.run || !this.reviewing) return;
+        this.streak = tier.min;
+        UI.renderStreak(false);
+        if (from !== tier.min) { const at = UI.counterRect(); UI.dropCounter(); Visuals.ring(at.x, at.y, "#ff4d5e", 150, 0.6); Visuals.burst(at.x, at.y, ["#ff4d5e", "#ff9aa5", "#ffffff"], 26, 260); }
+      }, 450);
+      return;
+    }
     const final = this.streak;
     const isNewBest = final > 0 && final >= Store.data.best && final > (this.bestAtStart || 0);
     setTimeout(() => {
+      if (run !== this.run) return;
       Visuals.shatter(document.getElementById("card"));
-      UI.showOver({ final, timedOut, isNewBest, q: this.current, peak: this.peakTierThisRun });
+      UI.showOver({ final, timedOut, isNewBest, q: this.current, peak: this.peakTierThisRun, correct: this.correct, answered: this.answered });
       this.streak = 0; this.tierIndex = 0;
       Visuals.setTier(0);
     }, 650);
+  },
+
+  // Continue after a checkpoint miss: the old card shatters and the next question comes in.
+  resume() {
+    if (!this.reviewing) return;
+    this.reviewing = false;
+    const run = this.run;
+    this.streak = TIERS[this.tierIndex].min;
+    UI.renderStreak(false);
+    Sound.tap();
+    Visuals.shatter(document.getElementById("card"));
+    $("card").style.opacity = 0;
+    setTimeout(() => { if (run === this.run && !$("screen-game").classList.contains("hidden")) this.next(); }, 380);
   },
 };
 
@@ -1876,6 +1925,7 @@ const UI = {
     } else {
       num.textContent = s; num.classList.remove("in");
     }
+    $("counterlabel").textContent = Game.answered ? `streak · ${Game.correct} of ${Game.answered} right` : "streak";
     const pill = $("tiername"), label = `Tier ${i + 1} · ${tier.name}`;
     if (pop && pill.textContent !== label) { pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump"); }
     pill.textContent = label;
@@ -1905,6 +1955,7 @@ const UI = {
     $("card").style.opacity = 1;
     $("qmeta").innerHTML = ""; $("passage").classList.add("hidden");
     $("answers").innerHTML = ""; $("answers").classList.remove("done");
+    $("cardreview").classList.add("hidden");
     Highlighter.hideButton();
   },
 
@@ -2070,11 +2121,32 @@ const UI = {
     }, delay);
   },
 
-  showOver({ final, timedOut, isNewBest, q, peak }) {
+  // The answer and explanation of a missed question, shown in the card until the player continues.
+  showReview({ q, timedOut, from, to, tier }) {
+    $("cr-title").textContent = timedOut ? "Time's up" : "Not quite";
+    if (q.html) $("cr-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
+    else $("cr-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+    this.put($("cr-exp"), q.explanation, q.html);
+    $("cr-back").textContent = from === to ? `You stay at ${to}, the start of ${tier.name}.` : `Back to ${to}, the start of ${tier.name}.`;
+    $("cr-id").textContent = q.ref ? "Question " + q.ref : "";
+    const box = $("cardreview");
+    box.classList.remove("hidden");
+    setTimeout(() => {
+      if (box.classList.contains("hidden")) return;
+      $("btn-continue").focus({ preventScroll: true });
+      box.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
+    }, 500);
+  },
+
+  dropCounter() { const num = $("counter-num"); num.classList.remove("in", "drop"); void num.offsetWidth; num.classList.add("drop"); },
+
+  showOver({ final, timedOut, isNewBest, q, peak, correct, answered }) {
     $("card").style.opacity = 0;
     setTimeout(() => {
       this.show("over");
-      $("over-title").textContent = timedOut ? "Time's up" : "Streak broken";
+      $("over-title").textContent = timedOut ? "Time's up" : "Run over";
+      $("over-acc").textContent = (answered ? Math.round((correct / answered) * 100) : 0) + "%";
+      $("over-acc-sub").textContent = `accuracy · ${correct} of ${answered}`;
       this.countUp($("final"), final, 800);
       $("newbest").classList.toggle("hidden", !isNewBest);
       const best = Store.data.best, next = TIERS[Game.tierFor(final) + 1];
@@ -2112,8 +2184,9 @@ $("set-sound").onclick = () => { Store.data.muted = !Store.data.muted; Store.sav
 $("btn-mute").onclick = () => { Store.data.muted = !Store.data.muted; Store.save(); UI.renderMute(); };
 $("btn-start").onclick = () => { Sound.tap(); startRun(); };
 $("btn-again").onclick = () => { Sound.tap(); startRun(); };
+$("btn-continue").onclick = () => Game.resume();
 $("btn-menu").onclick = () => UI.show("start");
-$("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true; Visuals.setTier(0); UI.show("start"); };
+$("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true; Game.reviewing = false; Visuals.setTier(0); UI.show("start"); };
 
 function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.best; Game.start(); }
 
@@ -2128,7 +2201,9 @@ document.addEventListener("keydown", (e) => {
   const game = !$("screen-game").classList.contains("hidden");
   const over = !$("screen-over").classList.contains("hidden");
   const start = !$("screen-start").classList.contains("hidden");
-  if (game) {
+  if (game && Game.reviewing) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); Game.resume(); }
+  } else if (game) {
     const i = "1234".indexOf(e.key) >= 0 ? "1234".indexOf(e.key) : "abcd".indexOf(e.key.toLowerCase());
     if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.answer(i); }
   } else if ((over || start) && e.key === "Enter") {
