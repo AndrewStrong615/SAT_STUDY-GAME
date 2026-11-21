@@ -203,6 +203,13 @@ body.glow-border .card:not(.correct):not(.failed) { border-color: var(--accent);
 @media (hover: hover) { .answer:hover .k { background: var(--accent); color: #0a0c14; } }
 .answer .t { min-width: 0; overflow-wrap: anywhere; }
 .answer:disabled { cursor: default; transform: none; }
+/* the choice you have picked but not yet checked */
+.answer.picked { border-color: var(--accent); background: linear-gradient(180deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .1)); box-shadow: 0 0 0 2px var(--accent), 0 8px 26px var(--glow); }
+.answer.picked .k { background: var(--accent); color: #0a0c14; transform: scale(1.08); }
+#btn-check { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+#btn-check:disabled { opacity: .4; box-shadow: none; transform: none; filter: saturate(.5); }
+#btn-check kbd { display: none; font: 800 12px/1 ui-monospace, Menlo, monospace; letter-spacing: 0; text-transform: none; padding: 5px 8px; border-radius: 7px; background: rgba(10, 12, 20, .2); border: 1px solid rgba(10, 12, 20, .28); }
+@media (hover: hover) and (pointer: fine) { #btn-check kbd { display: inline-block; } }
 .answers.done .answer:not(.right):not(.wrong) { opacity: .38; box-shadow: none; border-color: var(--card-line); }
 .answer.right { background: linear-gradient(90deg, rgba(62, 224, 138, .36), rgba(62, 224, 138, .14)); border-color: var(--good); box-shadow: 0 0 0 1px var(--good), 0 0 26px rgba(62, 224, 138, .45); animation: rightPop .45s var(--spring); }
 .answer.right .k { background: var(--good); color: #062612; font-size: 0; transform: scale(1.1); }
@@ -395,7 +402,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     </div>
     <button class="bigbtn" id="btn-start">Start streak</button>
     <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
-    <p class="howto">Answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or tap. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
     <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
   </section>
 
@@ -421,6 +428,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div class="passage hidden" id="passage"></div>
       <div class="question" id="question"></div>
       <div class="answers" id="answers"></div>
+      <button class="bigbtn hidden" id="btn-check" type="button" disabled>Check answer <kbd aria-hidden="true">Enter ↵</kbd></button>
       <div class="review cardreview hidden" id="cardreview">
         <h3 id="cr-title">Not quite</h3>
         <p class="ans" id="cr-ans"></p>
@@ -538,7 +546,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "12";
+const BUILD = "13";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -1542,6 +1550,8 @@ const Game = {
   correct: 0, answered: 0,  // counted over the whole run, for the accuracy shown at the end
   reviewing: false,         // true while the explanation of a missed question is on screen
   locked: false, timerId: null, timeLeft: 0,
+  selected: null,           // the choice you have picked but not yet checked (its place on screen)
+  missAt: 0,                // when the last miss happened, so one press of Enter can't both check and continue
 
   tierFor(streak) { let i = 0; TIERS.forEach((t, k) => { if (streak >= t.min) i = k; }); return i; },
 
@@ -1602,7 +1612,7 @@ const Game = {
     // Built-in answers are shuffled. College Board ones keep A-D order because
     // their explanations refer to the choices by letter.
     this.order = this.current.html ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
-    this.locked = false;
+    this.locked = false; this.selected = null;
     UI.renderQuestion(this.current, this.order);
     this.startTimer();
   },
@@ -1615,8 +1625,28 @@ const Game = {
     this.timerId = setInterval(() => {
       const left = 1 - (performance.now() - started) / (total * 1000);
       UI.timer(Math.max(0, left));
-      if (left <= 0) { clearInterval(this.timerId); this.miss(null, true); }
+      if (left <= 0) { // out of time: a choice you had picked is checked, otherwise it is a miss
+        clearInterval(this.timerId);
+        if (this.selected != null && !UI.isOut(this.selected)) this.submit(); else this.miss(null, true);
+      }
     }, 100);
+  },
+
+  // Picking a choice only selects it. You can change your mind until you check it.
+  select(displayIndex) {
+    if (this.locked || !this.current) return;
+    if (UI.isOut(displayIndex)) return; // crossed out: bring it back first
+    if (this.selected !== displayIndex) Sound.tap();
+    this.selected = displayIndex;
+    UI.showSelected(displayIndex);
+  },
+
+  deselect() { if (this.locked) return; this.selected = null; UI.showSelected(null); },
+
+  // Check the picked choice (the Check answer button, or Enter).
+  submit() {
+    if (this.locked || !this.current || this.selected == null) return;
+    this.answer(this.selected);
   },
 
   answer(displayIndex) {
@@ -1671,7 +1701,7 @@ const Game = {
      In the last level the first miss ends the run. */
   miss(displayIndex, timedOut) {
     if (this.locked) return;
-    this.locked = true;
+    this.locked = true; this.missAt = performance.now();
     if (this.current.source === "College Board") Seen.answered(this.current.ref, false); // comes back first once everything has been seen
     clearInterval(this.timerId);
     this.answered++;
@@ -1992,6 +2022,7 @@ const UI = {
     $("card").style.opacity = 1;
     $("qmeta").innerHTML = ""; $("passage").classList.add("hidden");
     $("answers").innerHTML = ""; $("answers").classList.remove("done");
+    $("btn-check").classList.add("hidden"); $("btn-check").disabled = true;
     $("cardreview").classList.add("hidden");
     Highlighter.hideButton();
   },
@@ -2056,22 +2087,33 @@ const UI = {
       b.onclick = (e) => {
         if (e.target.closest && e.target.closest(".strike")) return;
         if (b.classList.contains("out")) { this.strike(i, false); return; }
-        Game.answer(i);
+        Game.select(i);
       };
+      b.setAttribute("aria-pressed", "false");
       box.appendChild(b);
     });
     box.classList.toggle("elim", !!Store.data.crossOut);
+    $("btn-check").classList.remove("hidden");
     const card = $("card");
     void card.offsetWidth; card.classList.add("in"); // replays the slide-in for every new question
   },
 
   isOut(i) { const b = $("answers").children[i]; return !!b && b.classList.contains("out"); },
 
+  // Mark choice i as the picked one (or none), and wake the Check answer button.
+  showSelected(i) {
+    [...$("answers").children].forEach((b, k) => { b.classList.toggle("picked", k === i); b.setAttribute("aria-pressed", String(k === i)); });
+    const check = $("btn-check");
+    check.disabled = i == null;
+    if (i != null) check.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" }); // keep it in view on small screens
+  },
+
   // Cross out choice i, or bring it back. `on` forces one or the other.
   strike(i, on) {
     const b = $("answers").children[i];
     if (!b || b.disabled) return;
     const out = b.classList.toggle("out", on);
+    if (out && Game.selected === i) Game.deselect(); // a crossed-out choice can't stay picked
     const k = b.querySelector(".k").textContent, ctl = b.querySelector(".strike");
     ctl.innerHTML = out ? "Undo" : "<s></s>";
     if (!out) ctl.firstChild.textContent = k;
@@ -2083,7 +2125,8 @@ const UI = {
   lockAnswers() {
     $("card").classList.remove("in");
     $("answers").classList.add("done");
-    for (const b of $("answers").children) b.disabled = true;
+    for (const b of $("answers").children) { b.disabled = true; b.classList.remove("picked"); }
+    $("btn-check").disabled = true;
   },
 
   markRight(i) {
@@ -2167,6 +2210,7 @@ const UI = {
     $("cr-back").textContent = from === to ? `You stay at ${to}, the start of ${tier.name}.` : `Back to ${to}, the start of ${tier.name}.`;
     $("cr-id").textContent = q.ref ? "Question " + q.ref : "";
     const box = $("cardreview");
+    $("btn-check").classList.add("hidden"); // Continue takes its place
     box.classList.remove("hidden");
     setTimeout(() => {
       if (box.classList.contains("hidden")) return;
@@ -2222,6 +2266,7 @@ $("btn-mute").onclick = () => { Store.data.muted = !Store.data.muted; Store.save
 $("btn-start").onclick = () => { Sound.tap(); startRun(); };
 $("btn-again").onclick = () => { Sound.tap(); startRun(); };
 $("btn-continue").onclick = () => Game.resume();
+$("btn-check").onclick = () => Game.submit();
 $("btn-menu").onclick = () => UI.show("start");
 $("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true; Game.reviewing = false; Visuals.setTier(0); UI.show("start"); };
 
@@ -2239,12 +2284,15 @@ document.addEventListener("keydown", (e) => {
   const over = !$("screen-over").classList.contains("hidden");
   const start = !$("screen-start").classList.contains("hidden");
   if (game && Game.reviewing) {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); Game.resume(); }
+    // A held key, or a second press right after the one that checked the answer, must not skip the explanation.
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!e.repeat && performance.now() - Game.missAt > 600) Game.resume(); }
   } else if (game) {
+    // A number or letter picks a choice. Enter checks the picked one.
     const i = "1234".indexOf(e.key) >= 0 ? "1234".indexOf(e.key) : "abcd".indexOf(e.key.toLowerCase());
-    if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.answer(i); }
+    if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.select(i); }
+    else if (e.key === "Enter" && Game.selected != null && !Game.locked) { e.preventDefault(); if (!e.repeat) Game.submit(); }
   } else if ((over || start) && e.key === "Enter") {
-    e.preventDefault(); startRun();
+    e.preventDefault(); if (!e.repeat) startRun();
   }
 });
 

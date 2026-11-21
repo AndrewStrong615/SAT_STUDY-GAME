@@ -17,8 +17,9 @@ the streak number while you play.
 Open `index.html` in any browser while you're online. There is nothing to
 install or build.
 
-- Tap an answer or press `1`–`4` (or `A`–`D`). `Enter` continues after a miss, and starts a new run from the start or end
-  screen.
+- Tap an answer or press `1`–`4` (or `A`–`D`) to pick it. Nothing is marked until you check it: tap **Check answer** or
+  press `Enter`. You can change your pick before then. `Enter` also continues after a miss, and starts a new run from the
+  start or end screen.
 - Settings on the start screen: Mixed / Math / Reading & Writing, an optional
   timer (20, 40 or 75 seconds), and sound. Mixed gives an even split: each
   question's section is a coin flip, but neither section can get more than two
