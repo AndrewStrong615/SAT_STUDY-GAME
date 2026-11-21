@@ -538,7 +538,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "11";
+const BUILD = "12";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -593,6 +593,17 @@ const Seen = {
 };
 Seen.load();
 
+/* Mixed mode deals Math and Reading & Writing evenly. Each question's section is
+   a coin flip, but neither section may get more than 2 questions ahead in a run,
+   so the two stay level and you never get a long run of one. `lead` is the
+   number of Math questions dealt this run minus the Reading & Writing ones. */
+const Mix = {
+  lead: 0,
+  pick() { return this.lead >= 2 ? "rw" : this.lead <= -2 ? "math" : Math.random() < 0.5 ? "math" : "rw"; },
+  dealt(sec, n = 1) { this.lead += sec === "math" ? n : -n; },
+  reset() { this.lead = 0; },
+};
+
 /* =====================================================================
    3b. COLLEGE BOARD SOURCE (live)
    Questions come straight from the public JSON endpoints behind the College
@@ -621,7 +632,7 @@ const CB = {
   error: "",
   queue: [],          // prefetched questions (promises)
   notice: "",         // a short message for the player, shown with the next question
-  reviewing: false,   // true while the questions you missed are coming back
+  reviewing: {},      // per section: true while the questions you missed are coming back
   reserved: new Set(),
   DIFF: { E: 1, M: 2, H: 3 },
 
@@ -691,21 +702,22 @@ const CB = {
     return c;
   },
 
-  // Choose a random question id you haven't been shown, with difficulty weighted by the tier.
-  pickMeta(tierIndex) {
-    const sec = Store.data.section;
-    const mine = this.list.filter((r) => sec === "mixed" || (sec === "math") === (r.section === "Math"));
+  // Choose a random question id you haven't been shown from one section ("math" or "rw"),
+  // with difficulty weighted by the tier.
+  pickMeta(tierIndex, sec) {
+    const mine = this.list.filter((r) => (sec === "math") === (r.section === "Math"));
+    const name = sec === "math" ? "Math" : "Reading & Writing";
     const free = (r) => !Game.used.has("cb-" + r.questionId) && !this.reserved.has(r.questionId) && !Seen.skip.has(String(r.questionId));
     let pool = mine.filter((r) => free(r) && !Seen.ids.has(String(r.questionId)));
     if (!pool.length && mine.some((r) => Seen.ids.has(String(r.questionId)))) {
       // You have been through every question here. The ones you got wrong come
       // back first; after those, the whole set starts over.
       pool = mine.filter((r) => free(r) && Seen.missed.has(String(r.questionId)));
-      if (pool.length) { if (!this.reviewing) this.notice = "You have seen every question. Here are the ones you missed."; this.reviewing = true; }
-      else {
+      if (pool.length) { if (!this.reviewing[sec]) this.notice = "You have seen every " + name + " question. Here are the ones you missed."; this.reviewing[sec] = true; }
+      else if (mine.some(free)) { // (if this run has used them all, there is nothing to start over with yet)
         Seen.forget(mine.map((r) => r.questionId));
-        this.reviewing = false;
-        this.notice = "You have seen every question. Starting the set over.";
+        this.reviewing[sec] = false;
+        this.notice = "You have seen every " + name + " question. Starting the set over.";
         pool = mine.filter(free);
       }
     }
@@ -769,9 +781,18 @@ const CB = {
   },
 
   async fetchOne(tierIndex) {
+    // Mixed: the section is chosen first and kept while retrying, so questions the
+    // game has to skip (typed-answer math, for example) can't tilt the mix.
+    const mixed = Store.data.section === "mixed";
+    let sec = mixed ? Mix.pick() : Store.data.section;
+    if (mixed) Mix.dealt(sec);
     for (let tries = 0; tries < 6; tries++) {
-      const meta = this.pickMeta(tierIndex);
-      if (!meta) return null;
+      let meta = this.pickMeta(tierIndex, sec);
+      if (!meta && mixed) { // nothing left in this section: use the other one
+        Mix.dealt(sec, -1); sec = sec === "math" ? "rw" : "math"; Mix.dealt(sec);
+        meta = this.pickMeta(tierIndex, sec);
+      }
+      if (!meta) break;
       this.reserved.add(meta.questionId);
       try {
         const u = this.urls();
@@ -782,6 +803,7 @@ const CB = {
         Seen.unusable(meta.questionId); // answered, but not a question the game can use
       } catch (e) { /* try another question */ }
     }
+    if (mixed) Mix.dealt(sec, -1); // no question came of it, so it doesn't count
     return null;
   },
 
@@ -923,6 +945,13 @@ function selfTest() {
     ["older format: choices are placed by letter, not arrival order", (() => { const q = n(old, disclosed({})); return !!q && q.answer === "B" && q.choices.map(text).join("") === "wxyz"; })()],
     ["older format: no answer key, skipped", n(old, disclosed({ correct_choice: "" })) === null],
     ["older format: explanation disagrees, skipped", n(old, disclosed({ rationale: "<p>Choice D is correct.</p>" })) === null],
+    ["mixed: Math and Reading & Writing stay within 2 of each other", (() => {
+      const keep = Mix.lead; let ok = true, math = 0;
+      Mix.reset();
+      for (let i = 0; i < 400; i++) { const s = Mix.pick(); Mix.dealt(s); if (s === "math") math++; if (Math.abs(Mix.lead) > 2) ok = false; }
+      Mix.lead = keep;
+      return ok && Math.abs(math - 200) <= 1;
+    })()],
   ];
   const failed = checks.filter(([, ok]) => !ok);
   const box = document.createElement("pre");
@@ -1526,13 +1555,21 @@ const Game = {
     if (!this.pool().length) return null;
     let pool = this.pool().filter((q) => !this.used.has(q.id));
     if (!pool.length) { this.used.clear(); if (this.current) this.used.add(this.current.id); pool = this.pool().filter((q) => !this.used.has(q.id)); }
+    // Mixed: choose the section first so the two come up evenly. If it has run out, use the other.
+    const mixed = Store.data.section === "mixed";
+    if (mixed) {
+      const want = Mix.pick(), inSection = pool.filter((q) => (q.section === "Math") === (want === "math"));
+      if (inSection.length) pool = inSection;
+    }
     const w = TIERS[this.tierIndex].difficulty;
     const avail = [1, 2, 3].filter((d) => pool.some((q) => q.difficulty === d));
     const total = avail.reduce((s, d) => s + w[d - 1], 0);
     let r = Math.random() * total, diff = avail[avail.length - 1];
     for (const d of avail) { r -= w[d - 1]; if (r <= 0) { diff = d; break; } }
     const list = pool.filter((q) => q.difficulty === diff);
-    return list[Math.floor(Math.random() * list.length)];
+    const q = list[Math.floor(Math.random() * list.length)];
+    if (mixed && q) Mix.dealt(q.section === "Math" ? "math" : "rw");
+    return q;
   },
 
   start() {
@@ -1540,7 +1577,7 @@ const Game = {
     this.streak = 0; this.tierIndex = 0; this.peakTierThisRun = 0; this.used.clear(); this.current = null;
     this.correct = 0; this.answered = 0; this.reviewing = false;
     this.run = (this.run || 0) + 1;
-    CB.reset();
+    CB.reset(); Mix.reset();
     Visuals.setTier(0);
     UI.show("game");
     UI.renderStreak(false);

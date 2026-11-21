@@ -20,7 +20,9 @@ install or build.
 - Tap an answer or press `1`–`4` (or `A`–`D`). `Enter` continues after a miss, and starts a new run from the start or end
   screen.
 - Settings on the start screen: Mixed / Math / Reading & Writing, an optional
-  timer (20, 40 or 75 seconds), and sound.
+  timer (20, 40 or 75 seconds), and sound. Mixed gives an even split: each
+  question's section is a coin flip, but neither section can get more than two
+  questions ahead of the other in a run.
 - Your best streak and highest tier are saved in your browser.
 
 ## Where the questions come from
