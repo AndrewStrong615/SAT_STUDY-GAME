@@ -206,6 +206,28 @@ body.glow-border .card:not(.correct):not(.failed) { border-color: var(--accent);
 /* the choice you have picked but not yet checked */
 .answer.picked { border-color: var(--accent); background: linear-gradient(180deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .1)); box-shadow: 0 0 0 2px var(--accent), 0 8px 26px var(--glow); }
 .answer.picked .k { background: var(--accent); color: #0a0c14; transform: scale(1.08); }
+/* typed-answer questions: an answer box, and a number pad on touch screens */
+.answers.typed { display: block; }
+.typedbox { max-width: 420px; margin: 0 auto; }
+.entry { display: flex; align-items: center; justify-content: center; min-height: 68px; padding: 10px 16px; border-radius: 16px; border: 1px solid var(--card-line); background: rgba(10, 12, 20, .45); font: 800 30px/1.1 var(--display); letter-spacing: .04em; cursor: text; transition: border-color .18s, box-shadow .2s, background .2s; }
+.entry:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.entry.has { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 8px 26px var(--glow); }
+.entry .ph { font: 600 16px/1.3 system-ui, sans-serif; letter-spacing: 0; color: var(--muted); }
+.entry .caret { width: 2px; height: 30px; margin-left: 3px; background: var(--accent); animation: caret 1.1s steps(2, start) infinite; }
+@keyframes caret { to { visibility: hidden; } }
+.entry.nudge { animation: wrongShake .42s; }
+.entryhint { margin: 8px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
+.keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.key { min-height: 52px; border-radius: 14px; border: 1px solid var(--card-line); background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .05)); font: 800 21px/1 var(--display); cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; transition: transform .1s, background .15s; }
+.key:active { transform: scale(.95); background: rgba(255, 255, 255, .22); }
+.key.wide { grid-column: span 2; }
+.key:disabled { opacity: .38; cursor: default; transform: none; }
+@media (hover: hover) and (pointer: fine) { .keypad { display: none; } } /* a keyboard is there: just type */
+.answers.done .keypad, .answers.done .entryhint { display: none; } /* once it is marked, make room for the explanation */
+.answers.done .entry { box-shadow: none; }
+.answers.done .entry .caret { display: none; }
+.typedbox.right .entry { border-color: var(--good); background: rgba(62, 224, 138, .2); box-shadow: 0 0 0 1px var(--good), 0 0 26px rgba(62, 224, 138, .45); animation: rightPop .45s var(--spring); }
+.typedbox.wrong .entry { border-color: var(--bad); background: rgba(255, 77, 94, .2); box-shadow: 0 0 0 1px var(--bad), 0 0 26px rgba(255, 77, 94, .45); animation: wrongShake .42s; }
 #btn-check { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 12px; }
 #btn-check:disabled { opacity: .4; box-shadow: none; transform: none; filter: saturate(.5); }
 #btn-check kbd { display: none; font: 800 12px/1 ui-monospace, Menlo, monospace; letter-spacing: 0; text-transform: none; padding: 5px 8px; border-radius: 7px; background: rgba(10, 12, 20, .2); border: 1px solid rgba(10, 12, 20, .28); }
@@ -402,7 +424,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     </div>
     <button class="bigbtn" id="btn-start">Start streak</button>
     <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
-    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
     <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
   </section>
 
@@ -492,6 +514,8 @@ body.calc-compact .progress { margin: 4px auto 10px; }
        choices: ["2", "3", "4", "6"],          // four, in A B C D order
        answer: "C",
        explanation: "Divide both sides by 3: x = 4." },
+   For a typed-answer question, leave out `choices` and `answer` and give
+   `kind: "typed", answers: ["7/2", "3.5"]` (every form that counts).
    ===================================================================== */
 const QUESTIONS = [];
 
@@ -546,7 +570,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "13";
+const BUILD = "14";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -610,6 +634,67 @@ const Mix = {
   pick() { return this.lead >= 2 ? "rw" : this.lead <= -2 ? "math" : Math.random() < 0.5 ? "math" : "rw"; },
   dealt(sec, n = 1) { this.lead += sec === "math" ? n : -n; },
   reset() { this.lead = 0; },
+};
+
+/* Typed answers (the SAT's free response questions), graded the way the SAT grades
+   them. Any correct form counts (7/2 or 3.5). A decimal that doesn't fit may be cut
+   off or rounded, as long as it fills the answer box (2/3 as .6666, .6667 or 0.666,
+   but not 0.66). */
+const Typed = {
+  FORM: /^-?(?:\d+\/\d+|\d+\.?\d*|\.\d+)$/,     // a whole number, a decimal or a fraction
+  PARTIAL: /^-?(?:\d*\.?\d*|\d+\/\d*)$/,         // something still being typed
+  clean(s) { return String(s == null ? "" : s).replace(/<[^>]*>/g, "").replace(/\u2212/g, "-").replace(/\s+/g, ""); },
+  value(s) {
+    s = this.clean(s);
+    if (!this.FORM.test(s)) return NaN;
+    if (s.includes("/")) { const [a, b] = s.split("/"); return +b === 0 ? NaN : +a / +b; }
+    return +s;
+  },
+  valid(s) { return !Number.isNaN(this.value(s)); },
+  // How many characters the answer box takes, not counting a minus sign (5 on the SAT).
+  limit(answers) { return Math.max(5, ...answers.map((a) => this.clean(a).replace("-", "").length)); },
+  matches(input, answers) {
+    const text = this.clean(input), v = this.value(text);
+    if (Number.isNaN(v)) return false;
+    const same = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
+    const decimals = text.includes("/") || !text.includes(".") ? 0 : text.length - text.indexOf(".") - 1;
+    const full = decimals >= 3 || text.replace("-", "").length >= 5; // it fills the answer box
+    return answers.some((a) => {
+      const want = this.value(a);
+      if (Number.isNaN(want)) return false;
+      if (same(v, want)) return true;
+      if (!decimals || !full) return false;
+      const p = 10 ** decimals, nudge = Math.sign(want) * 1e-9;
+      return same(v, Math.trunc(want * p + nudge) / p) || same(v, Math.round(want * p + nudge) / p);
+    });
+  },
+};
+
+/* When a reply from College Board can't be used, the game remembers what kind of
+   reply it was (field names and the look of the answer key, never the question),
+   so a problem can be tracked down. Open index.html?debug to see the notes. */
+const DEBUG_KEY = "satStreak.debug";
+const Debug = {
+  note(meta, raw) {
+    try {
+      const look = (v) => String(v).replace(/[a-z]/gi, "a").replace(/\d/g, "9").slice(0, 12);
+      const item = Array.isArray(raw) ? raw[0] : raw, key = item && item.correct_answer;
+      const row = { section: meta.section, format: meta.externalId ? "new" : "old", type: String((item && item.type) || ""), fields: Object.keys(item || {}).slice(0, 30), key: Array.isArray(key) ? key.map(look) : look(key), options: Array.isArray(item && item.answerOptions) ? item.answerOptions.length : null };
+      const all = JSON.parse(localStorage.getItem(DEBUG_KEY) || "[]");
+      if (all.some((r) => r.type === row.type && String(r.key) === String(row.key))) return;
+      all.push(row);
+      localStorage.setItem(DEBUG_KEY, JSON.stringify(all.slice(-12)));
+    } catch (e) { /* private mode: no notes */ }
+  },
+  show() {
+    let text = "[]";
+    try { text = JSON.stringify(JSON.parse(localStorage.getItem(DEBUG_KEY) || "[]"), null, 1); } catch (e) { /* ignore */ }
+    const box = document.createElement("pre");
+    box.id = "debug";
+    box.style.cssText = "position:fixed;inset:0;z-index:99;margin:0;padding:20px;overflow:auto;background:#0b0d16;color:#e8ecff;font:13px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap";
+    box.textContent = "Replies the game could not use (version " + BUILD + ")\n\n" + text;
+    document.body.appendChild(box);
+  },
 };
 
 /* =====================================================================
@@ -748,14 +833,41 @@ const CB = {
     return found.size === 1 ? [...found][0] : "";
   },
 
+  // The answer the explanation states as a plain number ("The correct answer is 3.5."), or "".
+  numberFromRationale(html) {
+    const text = String(html || "").replace(/<math[\s\S]*?<\/math>/gi, " § ").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&minus;|\u2212/g, "-").replace(/\s+/g, " ");
+    const m = /correct answer is (-?[\d.\/]+?)\.?(?= |$)/i.exec(text);
+    return m && Typed.valid(m[1]) ? m[1] : "";
+  },
+
+  // A typed-answer question. It is used only when every listed answer is a plain number
+  // or fraction and the explanation, where it states the answer that way, agrees.
+  normalizeTyped(meta, raw) {
+    const listed = (Array.isArray(raw.correct_answer) ? raw.correct_answer : [raw.correct_answer]).map((a) => Typed.clean(a)).filter(Boolean);
+    const answers = [...new Set(listed)];
+    if (!answers.length || !answers.every((a) => Typed.valid(a))) return null;
+    const question = sanitize(raw.stem);
+    if (!hasContent(question)) return null;
+    const said = this.numberFromRationale(raw.rationale);
+    if (said && !Typed.matches(said, answers) && !answers.some((a) => Typed.matches(a, [said]))) return null;
+    return {
+      id: "cb-" + meta.questionId, ref: String(meta.questionId), html: true, source: "College Board",
+      section: meta.section, topic: meta.topic, difficulty: this.DIFF[meta.difficulty] || 2,
+      passage: sanitize(raw.stimulus), question, kind: "typed", choices: [], answers, answer: answers.join(" or "),
+      explanation: sanitize(raw.rationale),
+    };
+  },
+
   // Turn College Board's reply into the game's question format (or null to skip it).
   // A question is only used when everything that says which choice is right agrees:
   // the answer letter, the answer id, and the explanation. Anything unclear is skipped.
   normalize(meta, raw) {
     let passage, question, choices, answer, explanation;
     if (meta.externalId) {
-      if (String(raw.type || "").toLowerCase() !== "mcq") return null; // typed-answer question
       const opts = Array.isArray(raw.answerOptions) ? raw.answerOptions : [];
+      const type = String(raw.type || "").toLowerCase();
+      if (type === "spr" || (type !== "mcq" && !opts.length)) return this.normalizeTyped(meta, raw); // typed-answer question
+      if (type !== "mcq") return null;
       const correct = Array.isArray(raw.correct_answer) ? raw.correct_answer : [raw.correct_answer];
       if (correct.length !== 1) return null;                           // no single right answer
       passage = raw.stimulus; question = raw.stem; explanation = raw.rationale;
@@ -774,7 +886,7 @@ const CB = {
       choices = Object.keys(ch).length === 4 ? ["a", "b", "c", "d"].map(pick) : [];
       answer = String(ans.correct_choice || "").trim().toUpperCase();
     }
-    // The game has four answer buttons, so anything else is skipped.
+    // A multiple-choice question needs exactly four choices, so anything else is skipped.
     if (!question || choices.length !== 4 || answer.length !== 1 || !"ABCD".includes(answer)) return null;
     const said = this.keyFromRationale(explanation);
     if (said && said !== answer) return null;                          // explanation disagrees with the key
@@ -809,6 +921,7 @@ const CB = {
         const q = raw && this.normalize(meta, raw);
         if (q) { q.notice = this.notice; this.notice = ""; return q; } // the notice goes with the question it is about
         Seen.unusable(meta.questionId); // answered, but not a question the game can use
+        if (raw) Debug.note(meta, raw);
       } catch (e) { /* try another question */ }
     }
     if (mixed) Mix.dealt(sec, -1); // no question came of it, so it doesn't count
@@ -924,6 +1037,7 @@ function selfTest() {
   const old = { questionId: "t2", ibn: "i1", section: "Math", topic: "", difficulty: "E" };
   const opts = (texts) => texts.map((t, i) => ({ id: "id" + i, content: "<p>" + t + "</p>" }));
   const mcq = (over) => Object.assign({ type: "mcq", stem: "<p>Pick one.</p>", stimulus: "", answerOptions: opts(["w", "x", "y", "z"]), correct_answer: ["C"], keys: ["id2"], rationale: "<p>Choice C is the best answer.</p><p>Choice A is incorrect.</p>" }, over);
+  const spr = (over) => Object.assign({ type: "spr", stem: "<p>What is x?</p>", stimulus: "", correct_answer: ["7/2", "3.5"], rationale: "<p>The correct answer is 3.5. Note that 7/2 and 3.5 are ways to enter it.</p>" }, over);
   const disclosed = (over) => [{ prompt: "<p>Pick one.</p>", body: "", answer: Object.assign({ choices: { d: { body: "<p>z</p>" }, a: { body: "<p>w</p>" }, c: { body: "<p>y</p>" }, b: { body: "<p>x</p>" } }, correct_choice: "b", rationale: "<p>Choice B is correct.</p>" }, over) }];
   const text = (html) => { const d = document.createElement("div"); d.innerHTML = html; d.querySelectorAll(".sr-only").forEach((e) => e.remove()); return d.textContent.replace(/\s+/g, " ").trim(); };
   const n = (m, raw) => CB.normalize(m, raw);
@@ -947,7 +1061,16 @@ function selfTest() {
     ["answer: explanation names no choice, letter is used", (n(meta, mcq({ rationale: "<p>Because of the slope.</p>" })) || {}).answer === "C"],
     ["answer: two right answers listed, skipped", n(meta, mcq({ correct_answer: ["A", "C"] })) === null],
     ["answer: no answer given, skipped", n(meta, mcq({ correct_answer: [] })) === null],
-    ["answer: typed-answer question, skipped", n(meta, mcq({ type: "spr", correct_answer: ["7"] })) === null],
+    ["typed: a typed-answer question is read", (() => { const q = n(meta, spr({})); return !!q && q.kind === "typed" && q.answers.join() === "7/2,3.5"; })()],
+    ["typed: an answer key that isn't a number, skipped", n(meta, spr({ correct_answer: ["x=3"] })) === null],
+    ["typed: no answer key, skipped", n(meta, spr({ correct_answer: [] })) === null],
+    ["typed: explanation states another number, skipped", n(meta, spr({ rationale: "<p>The correct answer is 4. More.</p>" })) === null],
+    ["typed: explanation states the answer as math, key is used", !!n(meta, spr({ rationale: "<p>The correct answer is <math><mfrac><mn>7</mn><mn>2</mn></mfrac></math>.</p>" }))],
+    ["typed: any correct form counts", ["7/2", "3.5", "3.50", "14/4"].every((a) => Typed.matches(a, ["7/2", "3.5"])) && !Typed.matches("3.4", ["7/2", "3.5"])],
+    ["typed: long decimals may be cut off or rounded", [".6666", ".6667", "0.666", "0.667", "2/3"].every((a) => Typed.matches(a, ["2/3"]))],
+    ["typed: a decimal cut too short is wrong", ["0.66", ".67", "0.7", "1"].every((a) => !Typed.matches(a, ["2/3"]))],
+    ["typed: negatives", Typed.matches("-.5", ["-1/2"]) && Typed.matches("-1/2", ["-0.5"]) && !Typed.matches(".5", ["-1/2"]) && Typed.matches("-.333", ["-1/3"])],
+    ["typed: half-typed answers are not numbers", ["", "-", "3/", ".", "1/0", "1/2/3", "abc"].every((a) => !Typed.valid(a)) && ["5", "5.", ".5", "-5", "12/5"].every((a) => Typed.valid(a))],
     ["answer: an empty choice, skipped", n(meta, mcq({ answerOptions: opts(["w", "", "y", "z"]) })) === null],
     ["answer: three choices, skipped", n(meta, mcq({ answerOptions: opts(["w", "x", "y"]) })) === null],
     ["older format: choices are placed by letter, not arrival order", (() => { const q = n(old, disclosed({})); return !!q && q.answer === "B" && q.choices.map(text).join("") === "wxyz"; })()],
@@ -1551,6 +1674,7 @@ const Game = {
   reviewing: false,         // true while the explanation of a missed question is on screen
   locked: false, timerId: null, timeLeft: 0,
   selected: null,           // the choice you have picked but not yet checked (its place on screen)
+  entry: "",                // what you have typed so far on a typed-answer question
   missAt: 0,                // when the last miss happened, so one press of Enter can't both check and continue
 
   tierFor(streak) { let i = 0; TIERS.forEach((t, k) => { if (streak >= t.min) i = k; }); return i; },
@@ -1612,7 +1736,7 @@ const Game = {
     // Built-in answers are shuffled. College Board ones keep A-D order because
     // their explanations refer to the choices by letter.
     this.order = this.current.html ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
-    this.locked = false; this.selected = null;
+    this.locked = false; this.selected = null; this.entry = "";
     UI.renderQuestion(this.current, this.order);
     this.startTimer();
   },
@@ -1627,14 +1751,31 @@ const Game = {
       UI.timer(Math.max(0, left));
       if (left <= 0) { // out of time: a choice you had picked is checked, otherwise it is a miss
         clearInterval(this.timerId);
-        if (this.selected != null && !UI.isOut(this.selected)) this.submit(); else this.miss(null, true);
+        const ready = this.isTyped() ? Typed.valid(this.entry) : this.selected != null && !UI.isOut(this.selected);
+        if (ready) this.submit(); else this.miss(null, true);
       }
     }, 100);
   },
 
+  isTyped() { return !!this.current && this.current.kind === "typed"; },
+
+  // One key of a typed answer: a digit, ".", "/", "-" (flips the sign) or "back".
+  type(key) {
+    if (this.locked || !this.isTyped()) return;
+    let v = this.entry;
+    if (key === "back") v = v.slice(0, -1);
+    else if (key === "-") v = v.startsWith("-") ? v.slice(1) : "-" + v;
+    else if (/^[\d.\/]$/.test(key)) v += key;
+    else return;
+    if (!Typed.PARTIAL.test(v) || v.replace("-", "").length > Typed.limit(this.current.answers)) { UI.nudgeEntry(); return; }
+    if (v !== this.entry) Sound.tap();
+    this.entry = v;
+    UI.showEntry(v);
+  },
+
   // Picking a choice only selects it. You can change your mind until you check it.
   select(displayIndex) {
-    if (this.locked || !this.current) return;
+    if (this.locked || !this.current || this.isTyped()) return;
     if (UI.isOut(displayIndex)) return; // crossed out: bring it back first
     if (this.selected !== displayIndex) Sound.tap();
     this.selected = displayIndex;
@@ -1645,7 +1786,13 @@ const Game = {
 
   // Check the picked choice (the Check answer button, or Enter).
   submit() {
-    if (this.locked || !this.current || this.selected == null) return;
+    if (this.locked || !this.current) return;
+    if (this.isTyped()) {
+      if (!Typed.valid(this.entry)) { UI.nudgeEntry(); return; } // "3/" is not an answer yet
+      if (Typed.matches(this.entry, this.current.answers)) this.hit(0); else this.miss(0, false);
+      return;
+    }
+    if (this.selected == null) return;
     this.answer(this.selected);
   },
 
@@ -1705,7 +1852,7 @@ const Game = {
     if (this.current.source === "College Board") Seen.answered(this.current.ref, false); // comes back first once everything has been seen
     clearInterval(this.timerId);
     this.answered++;
-    const correctDisplay = this.order.indexOf("ABCD".indexOf(this.current.answer));
+    const correctDisplay = this.isTyped() ? null : this.order.indexOf("ABCD".indexOf(this.current.answer));
     UI.markWrong(displayIndex, correctDisplay);
     Sound.break();
     UI.buzz([40, 50, 90]);
@@ -2021,7 +2168,7 @@ const UI = {
     $("card").classList.remove("correct", "failed", "in");
     $("card").style.opacity = 1;
     $("qmeta").innerHTML = ""; $("passage").classList.add("hidden");
-    $("answers").innerHTML = ""; $("answers").classList.remove("done");
+    $("answers").innerHTML = ""; $("answers").classList.remove("done", "typed");
     $("btn-check").classList.add("hidden"); $("btn-check").disabled = true;
     $("cardreview").classList.add("hidden");
     Highlighter.hideButton();
@@ -2048,7 +2195,7 @@ const UI = {
       const span = document.createElement("span"); span.className = "chip " + cls; span.textContent = txt; $("qmeta").appendChild(span);
     }
     if (q.source) { const span = document.createElement("span"); span.className = "chip"; span.textContent = q.source; $("qmeta").appendChild(span); }
-    { // the cross-out tool: turn it on, then cross out choices you have ruled out
+    if (q.kind !== "typed") { // the cross-out tool: turn it on, then cross out choices you have ruled out
       const b = document.createElement("button");
       b.type = "button"; b.className = "calcbtn"; b.id = "btn-elim";
       b.setAttribute("aria-label", "Cross-out tool: show or hide the cross-out buttons beside each choice");
@@ -2075,7 +2222,18 @@ const UI = {
     $("passage").classList.toggle("hidden", !q.passage);
     this.put($("question"), q.question, q.html);
     const box = $("answers");
-    order.forEach((orig, i) => {
+    if (q.kind === "typed") { // an answer box instead of choices; touch screens also get a number pad
+      box.classList.add("typed");
+      const keys = ["1", "2", "3", "/", "4", "5", "6", ".", "7", "8", "9", "-", "0", "back"];
+      const names = { "/": "Fraction bar", ".": "Decimal point", "-": "Negative", back: "Delete" };
+      box.innerHTML = `<div class="typedbox"><div class="entry" id="entry" tabindex="0" role="group" aria-label="Your answer"><span class="val" aria-live="polite"></span><i class="caret"></i></div>`
+        + `<p class="entryhint">Type a number, a decimal like 3.5 or a fraction like 7/2.</p><div class="keypad">`
+        + keys.map((k) => `<button type="button" class="key${k === "0" || k === "back" ? " wide" : ""}" data-k="${k}"${names[k] ? ` aria-label="${names[k]}"` : ""}>${k === "back" ? "⌫" : k === "-" ? "−" : k}</button>`).join("")
+        + `</div></div>`;
+      for (const b of box.querySelectorAll(".key")) b.onclick = () => Game.type(b.dataset.k);
+      this.showEntry("");
+    }
+    else order.forEach((orig, i) => {
       const b = document.createElement("button");
       b.className = "answer";
       b.style.setProperty("--i", i);
@@ -2099,6 +2257,21 @@ const UI = {
   },
 
   isOut(i) { const b = $("answers").children[i]; return !!b && b.classList.contains("out"); },
+
+  // Show what has been typed so far, and wake the Check answer button once it is a number.
+  showEntry(text) {
+    const el = $("entry"); if (!el) return;
+    const val = el.querySelector(".val");
+    val.textContent = text ? text.replace("-", "−") : "Your answer";
+    val.classList.toggle("ph", !text);
+    el.classList.toggle("has", !!text);
+    const check = $("btn-check");
+    check.disabled = !Typed.valid(text);
+    if (text) check.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
+  },
+
+  // A key that can't go there (a second decimal point, or no room left).
+  nudgeEntry() { const el = $("entry"); if (!el) return; el.classList.remove("nudge"); void el.offsetWidth; el.classList.add("nudge"); },
 
   // Mark choice i as the picked one (or none), and wake the Check answer button.
   showSelected(i) {
@@ -2126,6 +2299,7 @@ const UI = {
     $("card").classList.remove("in");
     $("answers").classList.add("done");
     for (const b of $("answers").children) { b.disabled = true; b.classList.remove("picked"); }
+    for (const b of $("answers").querySelectorAll(".key")) b.disabled = true;
     $("btn-check").disabled = true;
   },
 
@@ -2139,7 +2313,7 @@ const UI = {
     this.lockAnswers();
     const btns = $("answers").children;
     if (i != null) btns[i].classList.add("wrong");
-    btns[correct].classList.add("right");
+    if (correct != null) btns[correct].classList.add("right");
     $("card").classList.add("failed");
   },
 
@@ -2152,7 +2326,7 @@ const UI = {
   },
 
   counterRect() { const r = $("counter").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
-  answerRect(i) { const r = $("answers").children[i].getBoundingClientRect(); return { x: r.left + Math.min(34, r.width / 2), y: r.top + r.height / 2 }; },
+  answerRect(i) { const r = ($("entry") || $("answers").children[i]).getBoundingClientRect(); return { x: r.left + Math.min(34, r.width / 2), y: r.top + r.height / 2 }; },
 
   shake(hard) {
     const cls = hard ? "shake-hard" : "shake";
@@ -2201,11 +2375,17 @@ const UI = {
     }, delay);
   },
 
+  // "Correct answer: ..." for the question that was missed.
+  answerLine(el, q) {
+    if (q.kind === "typed") el.textContent = "Correct answer: " + q.answers.join(" or ").replace(/-/g, "−");
+    else if (q.html) el.innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
+    else el.textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+  },
+
   // The answer and explanation of a missed question, shown in the card until the player continues.
   showReview({ q, timedOut, from, to, tier }) {
     $("cr-title").textContent = timedOut ? "Time's up" : "Not quite";
-    if (q.html) $("cr-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
-    else $("cr-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+    this.answerLine($("cr-ans"), q);
     this.put($("cr-exp"), q.explanation, q.html);
     $("cr-back").textContent = from === to ? `You stay at ${to}, the start of ${tier.name}.` : `Back to ${to}, the start of ${tier.name}.`;
     $("cr-id").textContent = q.ref ? "Question " + q.ref : "";
@@ -2243,8 +2423,7 @@ const UI = {
       $("over-tier").style.color = TIERS[peak].colors.accent;
       this.renderPath($("over-path"), peak, true);
       this.put($("over-q"), (q.passage ? q.passage + " " : "") + q.question, q.html);
-      if (q.html) $("over-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
-      else $("over-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+      this.answerLine($("over-ans"), q);
       this.put($("over-exp"), q.explanation, q.html);
       $("over-id").textContent = q.ref ? "Question " + q.ref : "";
     }, 250);
@@ -2289,7 +2468,13 @@ document.addEventListener("keydown", (e) => {
   } else if (game) {
     // A number or letter picks a choice. Enter checks the picked one.
     const i = "1234".indexOf(e.key) >= 0 ? "1234".indexOf(e.key) : "abcd".indexOf(e.key.toLowerCase());
-    if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.select(i); }
+    if (Game.isTyped()) { // a typed-answer question: the keys write the answer, Enter checks it
+      if (Game.locked) return;
+      if (/^[\d.\/-]$/.test(e.key) || e.key === "\u2212") { e.preventDefault(); Game.type(e.key === "\u2212" ? "-" : e.key); }
+      else if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); Game.type("back"); }
+      else if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) Game.submit(); }
+    }
+    else if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.select(i); }
     else if (e.key === "Enter" && Game.selected != null && !Game.locked) { e.preventDefault(); if (!e.repeat) Game.submit(); }
   } else if ((over || start) && e.key === "Enter") {
     e.preventDefault(); if (!e.repeat) startRun();
@@ -2297,6 +2482,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 if (/[?&]selftest\b/.test(location.search)) window.SELFTEST = selfTest();
+if (/[?&]debug\b/.test(location.search)) Debug.show();
 
 $("build").textContent = "Version " + BUILD;
 (async function checkForUpdate() {

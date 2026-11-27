@@ -20,6 +20,8 @@ install or build.
 - Tap an answer or press `1`–`4` (or `A`–`D`) to pick it. Nothing is marked until you check it: tap **Check answer** or
   press `Enter`. You can change your pick before then. `Enter` also continues after a miss, and starts a new run from the
   start or end screen.
+- Some math questions have no choices: you type the answer (a touch screen gets a number pad). Any correct form
+  counts, such as `7/2` or `3.5`, and long decimals follow the SAT's rule: `2/3` can be `.6666`, `.6667` or `0.666`.
 - Settings on the start screen: Mixed / Math / Reading & Writing, an optional
   timer (20, 40 or 75 seconds), and sound. Mixed gives an even split: each
   question's section is a coin flip, but neither section can get more than two
@@ -85,10 +87,13 @@ College Board's replies are cleaned up before they are shown:
   rewritten so every browser draws them.
 - A question is only used when the answer letter, the answer id and the
   explanation all point at the same choice. Anything unclear is skipped, as are
-  typed-answer questions and questions without exactly four choices.
+  multiple-choice questions without exactly four choices.
+- A typed-answer question is only used when every answer in its key is a plain
+  number or fraction, and the explanation agrees where it states the answer.
 
-Open `index.html?selftest` to run 25 made-up sample replies through this code
-and see a pass or fail for each. The game-over card shows a question number, so
+Open `index.html?selftest` to run made-up sample replies through this code
+and see a pass or fail for each. `index.html?debug` lists the kinds of reply the
+game could not use (field names only, never the question). The game-over card shows a question number, so
 a question that still looks wrong can be reported.
 
 ## Test tools
