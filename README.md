@@ -4,13 +4,15 @@ A one-file SAT study game. Answer real SAT questions in a row.
 Every right answer adds 1 to your streak, and the longer the streak, the more
 epic the world gets: Spark, Flame, Ocean, Storm, Galaxy, Supernova, Legendary.
 
-**The rules.** Each level is a checkpoint. A wrong answer (or running out of
-time) shows you the right answer and the explanation, then sends you back to
-the start of the level you are in: miss at 13 in Ocean and you are back at 10,
-not at 0. In the last level, Legendary, you play until your first miss. That
-miss ends the run, and the end screen shows your accuracy over the whole run
-(right answers out of all questions answered). The same count is shown under
-the streak number while you play.
+**The rules.** You start each run with 3 lives, shown as hearts at the top. A
+wrong answer (or running out of time) costs a life. It shows you the right
+answer and the explanation, then sends you back to the start of the level you
+are in: miss at 13 in Ocean and you are back at 10, not at 0. Reaching a new
+level gives one life back, and you never hold more than 3. Losing your last life
+ends the run and you start again from 0. The end screen shows your accuracy over
+the whole run (right answers out of all questions answered). The same count is
+shown under the streak number while you play. `LIVES` near the top of the
+script sets how many you get.
 
 ## Play
 

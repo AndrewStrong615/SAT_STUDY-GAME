@@ -74,6 +74,18 @@ button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-o
 .tierpill { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; padding: 8px 14px; border-radius: 999px; background: rgba(10, 12, 20, 0.6); border: 1px solid var(--card-line); color: var(--accent2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: color .6s, border-color .6s; }
 .tierpill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .tierpill.bump { animation: bump .5s var(--spring); }
+.topmid { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.hearts { display: flex; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(10, 12, 20, .5); border: 1px solid var(--card-line); }
+.heart { width: 22px; height: 22px; display: block; fill: #ff4d6d; stroke: #ff4d6d; stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(255, 77, 109, .7)); transition: fill .3s, stroke .3s, filter .3s; }
+.heart.gone { fill: rgba(255, 255, 255, .06); stroke: rgba(255, 255, 255, .34); filter: none; }
+.heart.lose { animation: heartLose .7s ease-out; }
+.heart.gain { animation: heartGain .7s var(--spring); }
+@keyframes heartLose { 0% { transform: scale(1); fill: #ff4d6d; stroke: #ff4d6d; } 25% { transform: scale(1.5) rotate(-12deg); fill: #fff; stroke: #fff; } 60% { transform: scale(.6) rotate(8deg); } 100% { transform: scale(1); } }
+@keyframes heartGain { 0% { transform: scale(.3); } 55% { transform: scale(1.6); filter: drop-shadow(0 0 14px #fff); } 100% { transform: scale(1); } }
+.tierup .life { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 77, 109, .2); border: 1px solid rgba(255, 77, 109, .6); color: #fff; font-weight: 800; font-size: 15px; animation: fadeUp .4s ease-out backwards .85s; }
+.tierup .life .heart { width: 18px; height: 18px; }
+.cardreview .lives { margin: 12px 0 0; font-weight: 800; color: #ff8fa3; }
+.cardreview .lives + .back { margin-top: 4px; }
 @keyframes bump { 40% { transform: scale(1.18); } }
 
 /* ---------- start screen ---------- */
@@ -424,7 +436,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     </div>
     <button class="bigbtn" id="btn-start">Start streak</button>
     <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
-    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. You have 3 lives: a miss costs one and sends you back to the start of your world, each new world gives one back, and losing all three ends the run. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
     <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
   </section>
 
@@ -432,7 +444,10 @@ body.calc-compact .progress { margin: 4px auto 10px; }
   <section id="screen-game" class="game hidden">
     <div class="topbar">
       <button class="iconbtn" id="btn-home" aria-label="Back to start"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <span class="tierpill" id="tiername">Spark</span>
+      <div class="topmid">
+        <span class="tierpill" id="tiername">Spark</span>
+        <div class="hearts" id="hearts" role="img" aria-label="3 of 3 lives"></div>
+      </div>
       <button class="iconbtn" id="btn-mute" aria-label="Sound on or off"></button>
     </div>
     <div class="counterwrap">
@@ -455,6 +470,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
         <h3 id="cr-title">Not quite</h3>
         <p class="ans" id="cr-ans"></p>
         <div class="exp" id="cr-exp"></div>
+        <p class="lives" id="cr-lives"></p>
         <p class="back" id="cr-back"></p>
         <p class="qid" id="cr-id"></p>
         <button class="bigbtn" id="btn-continue" type="button">Continue</button>
@@ -570,7 +586,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "14";
+const BUILD = "15";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -578,6 +594,10 @@ const BUILD = "14";
    here, the calculator is built into the page instead. */
 const DESMOS_API_KEY = "";
 const DESMOS_URL = "https://www.desmos.com/calculator";
+
+/* Lives. You start a run with this many. A miss costs one, reaching a new world
+   gives one back (never more than this many), and the run ends when none are left. */
+const LIVES = 3;
 
 /* Messages that pop up when you reach these streaks. */
 const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Absolutely locked in! 🌌", 50: "LEGENDARY! 👑", 100: "SAT GOD MODE 🏆" };
@@ -1671,6 +1691,7 @@ const Sound = {
 const Game = {
   streak: 0, tierIndex: 0, peakTierThisRun: 0, used: new Set(), current: null, order: null,
   correct: 0, answered: 0,  // counted over the whole run, for the accuracy shown at the end
+  lives: LIVES,             // a miss costs one; a new world gives one back; none left ends the run
   reviewing: false,         // true while the explanation of a missed question is on screen
   locked: false, timerId: null, timeLeft: 0,
   selected: null,           // the choice you have picked but not yet checked (its place on screen)
@@ -1710,6 +1731,7 @@ const Game = {
     Sound.ensure();
     this.streak = 0; this.tierIndex = 0; this.peakTierThisRun = 0; this.used.clear(); this.current = null;
     this.correct = 0; this.answered = 0; this.reviewing = false;
+    this.lives = LIVES; UI.renderLives();
     this.run = (this.run || 0) + 1;
     CB.reset(); Mix.reset();
     Visuals.setTier(0);
@@ -1813,7 +1835,9 @@ const Game = {
     UI.buzz(12);
     const streak = this.streak, run = this.run;
     const newTier = this.tierFor(streak), tier = TIERS[newTier], tieredUp = newTier > this.tierIndex;
+    const lifeBack = tieredUp && this.lives < LIVES; // a new world gives one life back, up to the full set
     if (tieredUp) { this.tierIndex = newTier; this.peakTierThisRun = Math.max(this.peakTierThisRun, newTier); }
+    if (lifeBack) this.lives++;
     if (streak > Store.data.best) Store.data.best = streak;
     if (newTier > Store.data.highestTier) Store.data.highestTier = newTier;
     Store.save();
@@ -1830,7 +1854,8 @@ const Game = {
       if (tieredUp) {
         Visuals.setTier(newTier);
         Sound.tierUp();
-        UI.tierUp(newTier, MILESTONES[streak]);
+        UI.tierUp(newTier, MILESTONES[streak], lifeBack);
+        if (lifeBack) UI.renderLives("gain");
         Visuals.flash("#ffffff", 0.5, 500);
         Visuals.burst(W / 2, H / 2, colors, 130, 560);
         Visuals.ring(W / 2, H / 2, tier.colors.accent, Math.max(W, H) * 0.7, 0.9, 10);
@@ -1843,9 +1868,9 @@ const Game = {
     setTimeout(() => this.next(), tieredUp ? 1050 : 560);
   },
 
-  /* A miss. Below the last level it is a checkpoint: you see the answer and the
-     explanation, drop back to the start of the level you are in, and carry on.
-     In the last level the first miss ends the run. */
+  /* A miss costs a life. While you have lives left it is a checkpoint: you see the
+     answer and the explanation, drop back to the start of the level you are in, and
+     carry on. The miss that takes your last life ends the run. */
   miss(displayIndex, timedOut) {
     if (this.locked) return;
     this.locked = true; this.missAt = performance.now();
@@ -1859,10 +1884,12 @@ const Game = {
     UI.shake(true);
     Visuals.flash("#ff2b40", 0.38, 600);
     const run = this.run, tier = TIERS[this.tierIndex];
-    if (this.tierIndex < TIERS.length - 1) {
+    this.lives = Math.max(0, this.lives - 1);
+    UI.renderLives("lose");
+    if (this.lives > 0) {
       const from = this.streak;
       this.reviewing = true;
-      UI.showReview({ q: this.current, timedOut, from, to: tier.min, tier });
+      UI.showReview({ q: this.current, timedOut, from, to: tier.min, tier, lives: this.lives });
       setTimeout(() => {
         if (run !== this.run || !this.reviewing) return;
         this.streak = tier.min;
@@ -2056,6 +2083,7 @@ const Calc = {
   },
 };
 
+const HEART = '<path d="M12 20.5s-7.5-4.6-9.3-9.4C1.5 7.7 3.4 4.5 6.7 4.5c2 0 3.6 1 4.6 2.6l.7 1.1.7-1.1c1-1.6 2.6-2.6 4.6-2.6 3.3 0 5.2 3.2 4 6.6-1.8 4.8-9.3 9.4-9.3 9.4z"/>';
 const ICONS = {
   graph: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c3 0 3-10 6-10s3 7 7 7"/></svg>',
   soundOn: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M16.5 8.5a5 5 0 010 7M19.2 6a8.5 8.5 0 010 12"/></svg>',
@@ -2337,11 +2365,11 @@ const UI = {
   // A short vibration on phones that support it. Follows the sound setting.
   buzz(pattern) { try { if (!Store.data.muted && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* not supported */ } },
 
-  tierUp(index, sub) {
+  tierUp(index, sub, lifeBack) {
     const tier = TIERS[index], next = TIERS[index + 1];
     const el = document.createElement("div");
     el.className = "tierup";
-    el.innerHTML = `<div class="rays"></div><div class="inner"><div class="small">TIER ${index + 1} UNLOCKED</div><div class="name"></div>${sub ? '<div class="sub"></div>' : ""}<div class="goal"></div></div>`;
+    el.innerHTML = `<div class="rays"></div><div class="inner"><div class="small">TIER ${index + 1} UNLOCKED</div><div class="name"></div>${sub ? '<div class="sub"></div>' : ""}<div class="goal"></div>${lifeBack ? `<div class="life"><svg class="heart" viewBox="0 0 24 24" aria-hidden="true">${HEART}</svg>+1 life</div>` : ""}</div>`;
     const name = el.querySelector(".name");
     [...tier.name].forEach((ch, i) => { const s = document.createElement("span"); s.textContent = ch; s.style.setProperty("--i", i); name.appendChild(s); });
     if (sub) el.querySelector(".sub").textContent = sub;
@@ -2375,6 +2403,16 @@ const UI = {
     }, delay);
   },
 
+  // The row of hearts. `change` plays the losing or the gaining of a life.
+  renderLives(change) {
+    const box = $("hearts"), n = Game.lives;
+    box.setAttribute("aria-label", `${n} of ${LIVES} lives`);
+    box.innerHTML = Array.from({ length: LIVES }, (_, i) => {
+      const cls = i < n ? (change === "gain" && i === n - 1 ? " gain" : "") : " gone" + (change === "lose" && i === n ? " lose" : "");
+      return `<svg class="heart${cls}" viewBox="0 0 24 24" aria-hidden="true">${HEART}</svg>`;
+    }).join("");
+  },
+
   // "Correct answer: ..." for the question that was missed.
   answerLine(el, q) {
     if (q.kind === "typed") el.textContent = "Correct answer: " + q.answers.join(" or ").replace(/-/g, "−");
@@ -2383,7 +2421,8 @@ const UI = {
   },
 
   // The answer and explanation of a missed question, shown in the card until the player continues.
-  showReview({ q, timedOut, from, to, tier }) {
+  showReview({ q, timedOut, from, to, tier, lives }) {
+    $("cr-lives").textContent = lives === 1 ? "You lost a life. This is your last one." : `You lost a life. ${lives} left.`;
     $("cr-title").textContent = timedOut ? "Time's up" : "Not quite";
     this.answerLine($("cr-ans"), q);
     this.put($("cr-exp"), q.explanation, q.html);
@@ -2405,7 +2444,7 @@ const UI = {
     $("card").style.opacity = 0;
     setTimeout(() => {
       this.show("over");
-      $("over-title").textContent = timedOut ? "Time's up" : "Run over";
+      $("over-title").textContent = "Out of lives";
       $("over-acc").textContent = (answered ? Math.round((correct / answered) * 100) : 0) + "%";
       $("over-acc-sub").textContent = `accuracy · ${correct} of ${answered}`;
       this.countUp($("final"), final, 800);
