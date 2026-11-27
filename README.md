@@ -18,9 +18,9 @@ Supernova, Legendary.
   Reading & Writing, or the timer length when the timer is on. A slow right
   answer still earns base × streak, and a miss never takes points away.
 
-The result is rounded to the nearest 5. The line under your score shows how the
-last answer was worked out. `POINTS` near the top of the script holds all of
-these numbers. Your best score is saved in your browser.
+The result is rounded to the nearest 5. The game itself doesn't spell the
+formula out: it shows the points each answer earned, your streak and the
+multiplier. `POINTS` near the top of the script holds all of these numbers. Your best score is saved in your browser.
 
 **The rules.** You start each run with 3 lives, shown as hearts at the top. A
 wrong answer (or running out of time) costs a life. It shows you the right
