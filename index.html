@@ -99,7 +99,9 @@ button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-o
 .logo span { background: linear-gradient(100deg, var(--accent) 20%, #fff 40%, var(--accent2) 60%, var(--accent) 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 5s linear infinite; }
 @keyframes shimmer { from { background-position: 125% 0; } to { background-position: -125% 0; } }
 .tag { color: var(--muted); margin: 12px auto 20px; max-width: 420px; }
-.records { display: grid; grid-template-columns: auto auto; gap: 12px; margin-bottom: 14px; }
+.records { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.record.main { grid-column: span 2; }
+.record.main b { font-size: clamp(34px, 11vw, 54px); }
 .record { padding: 16px 10px; min-width: 0; }
 @media (max-width: 360px) { .record span { letter-spacing: .06em; font-size: 11px; } }
 .record b { display: block; font-family: var(--display); font-size: clamp(23px, 7.4vw, 36px); font-weight: 900; line-height: 1.1; }
@@ -161,14 +163,26 @@ button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-o
   color: #fff; text-shadow: 0 0 18px var(--glow), 0 0 50px var(--glow);
   display: inline-block;
 }
+.counter.wide { font-size: clamp(56px, 15.5vw, 124px); }  /* 6 or 7 characters, like 12,430 */
+.counter.huge { font-size: clamp(44px, 12vw, 100px); }    /* longer still */
 .counter .num { display: inline-block; transform-origin: 50% 60%; }
 .counter .num.in { animation: numIn .45s var(--spring) both; }
 .counter .ghost { position: absolute; left: 0; right: 0; top: 0; animation: numOut .28s ease-in both; pointer-events: none; }
 @keyframes numIn { 0% { transform: translateY(42%) scale(.55); opacity: 0; } 55% { transform: translateY(-5%) scale(1.22) rotate(-3deg); opacity: 1; } 100% { transform: none; } }
 @keyframes numOut { to { transform: translateY(-55%) scale(.7); opacity: 0; } }
+.statrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
+.stat { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: rgba(10, 12, 20, .55); border: 1px solid var(--card-line); font-size: 13px; font-weight: 800; white-space: nowrap; }
+.stat i { font-style: normal; font-weight: 700; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.stat.mult { color: #0a0c14; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-color: transparent; }
+.stat.bump { animation: bump .5s var(--spring); }
+.stat.drop { animation: statDrop .6s ease-out; }
+@keyframes statDrop { 0%, 60% { background: rgba(255, 77, 94, .55); border-color: var(--bad); transform: scale(1.12); } 100% { transform: none; } }
+.lastgain { min-height: 18px; margin-top: 6px; color: var(--accent2); font-size: 13px; font-weight: 700; text-shadow: 0 1px 8px rgba(0, 0, 0, .7); }
+.lastgain.show { animation: fadeUp .35s ease-out; }
+body.calc-compact .statrow, body.calc-compact .lastgain { display: none; }
 .plus { position: absolute; left: 50%; top: 6%; font-family: var(--display); font-weight: 900; font-size: clamp(22px, 5vw, 32px); color: var(--accent2); text-shadow: 0 0 14px var(--glow); pointer-events: none; animation: plusUp .85s ease-out forwards; }
 @keyframes plusUp { 0% { transform: translateY(22px) scale(.5); opacity: 0; } 20% { transform: translateY(0) scale(1.15); opacity: 1; } 100% { transform: translateY(-44px) scale(1); opacity: 0; } }
-.counterlabel { text-shadow: 0 1px 8px rgba(0,0,0,.7); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; margin-top: -2px; }
+.counterlabel { text-shadow: 0 1px 8px rgba(0,0,0,.7); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; margin-top: 4px; }
 body.fire-counter .counter { color: #fff7d6; animation: fire 1.1s ease-in-out infinite alternate; }
 @keyframes fire {
   0%   { text-shadow: 0 -4px 6px #fff2a8, 0 -12px 18px #ffcc33, 0 -24px 34px #ff7a1a, 0 -40px 60px #ff2d00; }
@@ -299,9 +313,10 @@ body.shake-hard #app { animation: shakeHard .5s; }
 .overmsg { color: var(--accent2); font-weight: 700; margin: 10px 0 0; min-height: 1.5em; }
 .newbest { display: inline-block; margin-top: 10px; padding: 5px 14px; border-radius: 99px; background: linear-gradient(90deg, #ffd23f, #ff8a00); color: #2a1600; font-weight: 900; letter-spacing: .1em; font-size: 13px; box-shadow: 0 0 24px rgba(255, 190, 40, .6); animation: fadeUp .45s ease-out backwards .9s, pulse 1s ease-in-out 1.4s infinite alternate; }
 @keyframes pulse { to { transform: scale(1.08); } }
-.statline { display: flex; justify-content: center; gap: 12px; margin: 14px 0 6px; }
-.statline > div { flex: 1; max-width: 190px; padding: 10px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); }
-.statline b { display: block; font-family: var(--display); font-size: 26px; line-height: 1.2; }
+.statline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0 6px; }
+@media (max-width: 560px) { .statline { grid-template-columns: 1fr 1fr; } }
+.statline > div { min-width: 0; padding: 10px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); }
+.statline b { display: block; font-family: var(--display); font-size: clamp(20px, 5.6vw, 26px); line-height: 1.2; overflow-wrap: anywhere; }
 .statline span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
 .over .path { margin: 4px 0 6px; }
 .review { text-align: left; background: rgba(255,255,255,.06); border-radius: 16px; padding: 14px 16px; margin-top: 8px; border-left: 3px solid var(--good); }
@@ -396,8 +411,9 @@ body.calc-compact .progress { margin: 4px auto 10px; }
   <!-- START SCREEN -->
   <section id="screen-start" class="start">
     <h1 class="logo">SAT <span>STREAK</span></h1>
-    <p class="tag">Answer real SAT questions in a row. Every right answer grows your streak and powers up the world. A miss sends you back to the start of your level. Reach Legendary and play until you miss.</p>
+    <p class="tag">Answer real SAT questions for points. Harder questions, faster answers and longer streaks score more, and your streak powers up the world. You have 3 lives.</p>
     <div class="records">
+      <div class="record main glass"><b id="bestscore">0</b><span>Best score</span></div>
       <div class="record glass"><b id="best">0</b><span>Best streak</span></div>
       <div class="record glass"><b id="besttier">Spark</b><span>Highest tier</span></div>
     </div>
@@ -436,7 +452,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     </div>
     <button class="bigbtn" id="btn-start">Start streak</button>
     <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
-    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. You have 3 lives: a miss costs one and sends you back to the start of your world, each new world gives one back, and losing all three ends the run. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. Points for a right answer: 100, 150 or 200 by difficulty, times your streak multiplier (×2 at a streak of 10, up to ×5), plus up to 50% for speed. You have 3 lives: a miss costs one and sends you back to the start of your world, each new world gives one back, and losing all three ends the run. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
     <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
   </section>
 
@@ -453,7 +469,13 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     <div class="counterwrap">
       <div class="halo" id="halo"></div>
       <div class="counter" id="counter" aria-live="polite"><span class="num" id="counter-num">0</span></div>
-      <div class="counterlabel" id="counterlabel">streak</div>
+      <div class="counterlabel" id="counterlabel">points</div>
+      <div class="statrow">
+        <span class="stat" id="stat-streak"><i>Streak</i><b id="stat-streak-n">0</b></span>
+        <span class="stat mult" id="stat-mult" title="Streak multiplier">×1.0</span>
+        <span class="stat" id="stat-acc"><i>Right</i><b id="stat-acc-n">0 of 0</b></span>
+      </div>
+      <div class="lastgain" id="lastgain" aria-live="polite"></div>
     </div>
     <div class="progress">
       <div class="ptrack"><div class="pfill" id="pfill"></div><div class="pticks" id="pticks"></div></div>
@@ -480,14 +502,15 @@ body.calc-compact .progress { margin: 4px auto 10px; }
 
   <!-- GAME OVER -->
   <section id="screen-over" class="over glass hidden">
-    <h2 id="over-title">Streak broken</h2>
+    <h2 id="over-title">Out of lives</h2>
     <div class="final" id="final">0</div>
-    <div class="finalsub">final streak</div>
+    <div class="finalsub">points</div>
     <div id="newbest" class="newbest hidden">NEW BEST!</div>
     <p class="overmsg" id="over-msg"></p>
     <div class="statline">
       <div><b id="over-acc">0%</b><span id="over-acc-sub">accuracy</span></div>
-      <div><b id="over-best">0</b><span>best ever</span></div>
+      <div><b id="over-best">0</b><span>best score</span></div>
+      <div><b id="over-streak">0</b><span>longest streak</span></div>
       <div><b id="over-tier">Spark</b><span>tier reached</span></div>
     </div>
     <div class="path" id="over-path" aria-hidden="true"></div>
@@ -586,7 +609,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "15";
+const BUILD = "16";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -599,6 +622,32 @@ const DESMOS_URL = "https://www.desmos.com/calculator";
    gives one back (never more than this many), and the run ends when none are left. */
 const LIVES = 3;
 
+/* Points, the main score. A right answer earns the base for its difficulty, times a
+   streak multiplier, plus a speed bonus:
+     points = base x (1 + streak x perStreak, up to maxMultiplier) x (1 + speed bonus)
+   The speed bonus starts at speedBonus (0.5 = +50%) for an instant answer and fades
+   evenly to nothing at the par time. Par is the real SAT's pace per question, or the
+   timer length when the timer is on. A slow answer still earns base x streak. */
+const POINTS = {
+  base: [100, 150, 200],                          // easy, medium, hard
+  perStreak: 0.1,                                 // streak 10 = x2, streak 20 = x3
+  maxMultiplier: 5,                               // reached at streak 40
+  speedBonus: 0.5,
+  par: { "Math": 95, "Reading & Writing": 71 },   // seconds per question on the SAT
+};
+const Score = {
+  multiplier(streak) { return Math.min(POINTS.maxMultiplier, 1 + streak * POINTS.perStreak); },
+  par(q) { return Store.data.timer ? Store.data.seconds : POINTS.par[q.section] || 75; },
+  // `streak` is the streak going into the question; `seconds` is how long the answer took.
+  points(q, streak, seconds) {
+    const base = POINTS.base[(q.difficulty || 2) - 1] || POINTS.base[1];
+    const mult = this.multiplier(streak);
+    const speed = POINTS.speedBonus * Math.max(0, 1 - Math.max(0, seconds) / this.par(q));
+    return { base, mult, speed, total: Math.round((base * mult * (1 + speed)) / 5) * 5 };
+  },
+  show(n) { return Math.round(n).toLocaleString("en-US"); },
+};
+
 /* Messages that pop up when you reach these streaks. */
 const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Absolutely locked in! 🌌", 50: "LEGENDARY! 👑", 100: "SAT GOD MODE 🏆" };
 
@@ -607,7 +656,7 @@ const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Abs
    ===================================================================== */
 const STORE_KEY = "satStreak.v1";
 const Store = {
-  data: { best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false },
+  data: { bestScore: 0, best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false },
   load() {
     try { Object.assign(this.data, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch (e) { /* private mode: no saving */ }
   },
@@ -1096,6 +1145,9 @@ function selfTest() {
     ["older format: choices are placed by letter, not arrival order", (() => { const q = n(old, disclosed({})); return !!q && q.answer === "B" && q.choices.map(text).join("") === "wxyz"; })()],
     ["older format: no answer key, skipped", n(old, disclosed({ correct_choice: "" })) === null],
     ["older format: explanation disagrees, skipped", n(old, disclosed({ rationale: "<p>Choice D is correct.</p>" })) === null],
+    ["points: difficulty sets the base", (() => { const t = Store.data.timer; Store.data.timer = false; const p = (d, st, sec) => Score.points({ section: "Math", difficulty: d }, st, sec).total; const ok = p(1, 0, 999) === 100 && p(2, 0, 999) === 150 && p(3, 0, 999) === 200; Store.data.timer = t; return ok; })()],
+    ["points: the streak multiplies, up to 5 times", (() => { const t = Store.data.timer; Store.data.timer = false; const p = (st) => Score.points({ section: "Math", difficulty: 1 }, st, 999).total; const ok = p(0) === 100 && p(1) === 110 && p(10) === 200 && p(40) === 500 && p(90) === 500; Store.data.timer = t; return ok; })()],
+    ["points: speed adds up to half, and a slow answer loses nothing", (() => { const t = Store.data.timer; Store.data.timer = false; const p = (sec) => Score.points({ section: "Math", difficulty: 1 }, 0, sec).total; const ok = p(0) === 150 && p(47.5) === 125 && p(95) === 100 && p(500) === 100; Store.data.timer = t; return ok; })()],
     ["mixed: Math and Reading & Writing stay within 2 of each other", (() => {
       const keep = Mix.lead; let ok = true, math = 0;
       Mix.reset();
@@ -1692,6 +1744,9 @@ const Game = {
   streak: 0, tierIndex: 0, peakTierThisRun: 0, used: new Set(), current: null, order: null,
   correct: 0, answered: 0,  // counted over the whole run, for the accuracy shown at the end
   lives: LIVES,             // a miss costs one; a new world gives one back; none left ends the run
+  score: 0, peakStreak: 0,  // points this run, and the longest streak reached in it
+  shownAt: 0,               // when the current question appeared, for the speed bonus
+  lastGain: null,           // how the last right answer's points were worked out
   reviewing: false,         // true while the explanation of a missed question is on screen
   locked: false, timerId: null, timeLeft: 0,
   selected: null,           // the choice you have picked but not yet checked (its place on screen)
@@ -1732,6 +1787,7 @@ const Game = {
     this.streak = 0; this.tierIndex = 0; this.peakTierThisRun = 0; this.used.clear(); this.current = null;
     this.correct = 0; this.answered = 0; this.reviewing = false;
     this.lives = LIVES; UI.renderLives();
+    this.score = 0; this.peakStreak = 0; this.lastGain = null;
     this.run = (this.run || 0) + 1;
     CB.reset(); Mix.reset();
     Visuals.setTier(0);
@@ -1760,6 +1816,7 @@ const Game = {
     this.order = this.current.html ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
     this.locked = false; this.selected = null; this.entry = "";
     UI.renderQuestion(this.current, this.order);
+    this.shownAt = performance.now();
     this.startTimer();
   },
 
@@ -1829,7 +1886,13 @@ const Game = {
     this.locked = true;
     if (this.current.source === "College Board") Seen.answered(this.current.ref, true);
     clearInterval(this.timerId);
+    // Scored with the streak you had going into the question: the multiplier shown on screen.
+    const gain = Score.points(this.current, this.streak, (performance.now() - this.shownAt) / 1000);
     this.streak++; this.correct++; this.answered++;
+    this.peakStreak = Math.max(this.peakStreak, this.streak);
+    gain.difficulty = ["Easy", "Medium", "Hard"][(this.current.difficulty || 2) - 1];
+    this.score += gain.total; this.lastGain = gain;
+    if (this.score > Store.data.bestScore) Store.data.bestScore = this.score;
     UI.markRight(displayIndex);
     Sound.ding(this.streak);
     UI.buzz(12);
@@ -1894,16 +1957,16 @@ const Game = {
         if (run !== this.run || !this.reviewing) return;
         this.streak = tier.min;
         UI.renderStreak(false);
-        if (from !== tier.min) { const at = UI.counterRect(); UI.dropCounter(); Visuals.ring(at.x, at.y, "#ff4d5e", 150, 0.6); Visuals.burst(at.x, at.y, ["#ff4d5e", "#ff9aa5", "#ffffff"], 26, 260); }
+        if (from !== tier.min) { const at = UI.streakRect(); UI.dropCounter(); Visuals.ring(at.x, at.y, "#ff4d5e", 150, 0.6); Visuals.burst(at.x, at.y, ["#ff4d5e", "#ff9aa5", "#ffffff"], 26, 260); }
       }, 450);
       return;
     }
-    const final = this.streak;
-    const isNewBest = final > 0 && final >= Store.data.best && final > (this.bestAtStart || 0);
+    const final = this.score;
+    const isNewBest = final > 0 && final > (this.bestAtStart || 0);
     setTimeout(() => {
       if (run !== this.run) return;
       Visuals.shatter(document.getElementById("card"));
-      UI.showOver({ final, timedOut, isNewBest, q: this.current, peak: this.peakTierThisRun, correct: this.correct, answered: this.answered });
+      UI.showOver({ final, timedOut, isNewBest, q: this.current, peak: this.peakTierThisRun, correct: this.correct, answered: this.answered, streak: this.peakStreak });
       this.streak = 0; this.tierIndex = 0;
       Visuals.setTier(0);
     }, 650);
@@ -2112,6 +2175,7 @@ const UI = {
   },
 
   renderStart() {
+    $("bestscore").textContent = Score.show(Store.data.bestScore);
     $("best").textContent = Store.data.best;
     const top = TIERS[Store.data.highestTier] || TIERS[0];
     $("besttier").textContent = top.name;
@@ -2150,24 +2214,35 @@ const UI = {
   renderMute() { $("btn-mute").innerHTML = Store.data.muted ? ICONS.soundOff : ICONS.soundOn; },
 
   // pop = the streak just grew: roll the number, pulse the glow and float a "+1".
+  // The points counter, the streak chips under it, the level pill and the progress bar.
+  // `pop` plays the arrival of new points.
   renderStreak(pop) {
     const s = Game.streak, i = Game.tierFor(s), tier = TIERS[i], next = TIERS[i + 1];
-    const c = $("counter"), num = $("counter-num");
-    if (pop && num.textContent !== String(s)) {
+    const c = $("counter"), num = $("counter-num"), text = Score.show(Game.score), gain = Game.lastGain;
+    c.classList.toggle("wide", text.length >= 6 && text.length < 8);
+    c.classList.toggle("huge", text.length >= 8);
+    if (pop && num.textContent !== text) {
       const ghost = num.cloneNode(true);
       ghost.removeAttribute("id"); ghost.className = "num ghost"; ghost.setAttribute("aria-hidden", "true");
       c.appendChild(ghost); setTimeout(() => ghost.remove(), 300);
-      num.textContent = s;
+      num.textContent = text;
       num.classList.remove("in"); void num.offsetWidth; num.classList.add("in");
       const halo = $("halo"); halo.classList.remove("hit"); void halo.offsetWidth; halo.classList.add("hit");
       const plus = document.createElement("div");
-      plus.className = "plus"; plus.textContent = "+1"; plus.setAttribute("aria-hidden", "true");
-      plus.style.left = Math.min(c.parentNode.clientWidth - 48, c.offsetLeft + (c.offsetWidth + num.offsetWidth) / 2 + 4) + "px"; // just right of the number
+      plus.className = "plus"; plus.textContent = "+" + Score.show(gain ? gain.total : 0); plus.setAttribute("aria-hidden", "true");
+      plus.style.left = Math.min(c.parentNode.clientWidth - 96, c.offsetLeft + c.offsetWidth + 4) + "px"; // just right of the number
       c.parentNode.appendChild(plus); setTimeout(() => plus.remove(), 900);
+      for (const id of ["stat-streak", "stat-mult"]) { const el = $(id); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("bump"); }
     } else {
-      num.textContent = s; num.classList.remove("in");
+      num.textContent = text; num.classList.remove("in");
     }
-    $("counterlabel").textContent = Game.answered ? `streak · ${Game.correct} of ${Game.answered} right` : "streak";
+    $("stat-streak-n").textContent = s;
+    $("stat-mult").textContent = "×" + Score.multiplier(s).toFixed(1);
+    $("stat-acc-n").textContent = `${Game.correct} of ${Game.answered}`;
+    // How the last right answer was scored, so the points make sense.
+    const line = $("lastgain"), was = line.textContent;
+    line.textContent = gain ? `+${Score.show(gain.total)} = ${gain.difficulty} ${gain.base} × ${gain.mult.toFixed(1)} streak` + (gain.speed >= 0.005 ? ` + ${Math.round(gain.speed * 100)}% speed` : "") : "";
+    if (pop && line.textContent !== was) { line.classList.remove("show"); void line.offsetWidth; line.classList.add("show"); }
     const pill = $("tiername"), label = `Tier ${i + 1} · ${tier.name}`;
     if (pop && pill.textContent !== label) { pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump"); }
     pill.textContent = label;
@@ -2389,14 +2464,15 @@ const UI = {
 
   // Counts a number up from 0, slowing down as it arrives.
   countUp(el, to, delay) {
-    el.textContent = to && !REDUCED ? 0 : to;
+    el.textContent = Math.round(to).toLocaleString("en-US");
     if (!to || REDUCED) return;
-    const dur = Math.min(1100, 300 + to * 45);
+    const dur = Math.min(1100, 300 + to * 45), show = (n) => Math.round(n).toLocaleString("en-US");
+    el.textContent = show(0);
     setTimeout(() => {
       const t0 = performance.now();
       const step = (now) => {
         const k = Math.min(1, (now - t0) / dur);
-        el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+        el.textContent = show(to * (1 - Math.pow(1 - k, 3)));
         if (k < 1) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
@@ -2438,9 +2514,11 @@ const UI = {
     }, 500);
   },
 
-  dropCounter() { const num = $("counter-num"); num.classList.remove("in", "drop"); void num.offsetWidth; num.classList.add("drop"); },
+  // A miss sends the streak back: the streak chip shows it.
+  dropCounter() { for (const id of ["stat-streak", "stat-mult"]) { const el = $(id); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("drop"); } },
+  streakRect() { const r = $("stat-streak").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
 
-  showOver({ final, timedOut, isNewBest, q, peak, correct, answered }) {
+  showOver({ final, timedOut, isNewBest, q, peak, correct, answered, streak }) {
     $("card").style.opacity = 0;
     setTimeout(() => {
       this.show("over");
@@ -2449,15 +2527,15 @@ const UI = {
       $("over-acc-sub").textContent = `accuracy · ${correct} of ${answered}`;
       this.countUp($("final"), final, 800);
       $("newbest").classList.toggle("hidden", !isNewBest);
-      const best = Store.data.best, next = TIERS[Game.tierFor(final) + 1];
+      const best = Store.data.bestScore;
       let msg;
-      if (isNewBest) msg = "That's your longest streak yet.";
+      if (isNewBest) msg = "That's your best score yet.";
       else if (final === 0) msg = "Shake it off. The next one's yours.";
-      else if (next && next.min - final <= 2) msg = `So close: ${next.min - final} more would have reached ${next.name}.`;
-      else if (best > final) msg = `${best - final} short of your best. Go again.`;
+      else if (best > final) msg = `${Score.show(best - final)} short of your best. Go again.`;
       else msg = "You matched your best. One more beats it.";
       $("over-msg").textContent = msg;
-      $("over-best").textContent = best;
+      $("over-best").textContent = Score.show(best);
+      $("over-streak").textContent = streak;
       $("over-tier").textContent = TIERS[peak].name;
       $("over-tier").style.color = TIERS[peak].colors.accent;
       this.renderPath($("over-path"), peak, true);
@@ -2488,7 +2566,7 @@ $("btn-check").onclick = () => Game.submit();
 $("btn-menu").onclick = () => UI.show("start");
 $("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true; Game.reviewing = false; Visuals.setTier(0); UI.show("start"); };
 
-function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.best; Game.start(); }
+function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.bestScore; Game.start(); }
 
 Highlighter.init();
 $("calc-close").onclick = () => { Calc.wanted = false; Calc.sync(); };

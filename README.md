@@ -1,8 +1,26 @@
 # SAT Streak
 
-A one-file SAT study game. Answer real SAT questions in a row.
-Every right answer adds 1 to your streak, and the longer the streak, the more
-epic the world gets: Spark, Flame, Ocean, Storm, Galaxy, Supernova, Legendary.
+A one-file SAT study game. Answer real SAT questions for points.
+Harder questions, faster answers and longer streaks score more, and the longer
+your streak, the more epic the world gets: Spark, Flame, Ocean, Storm, Galaxy,
+Supernova, Legendary.
+
+**Points.** A right answer earns:
+
+    points = base × streak multiplier × (1 + speed bonus)
+
+- **Base** by difficulty: 100 easy, 150 medium, 200 hard.
+- **Streak multiplier:** ×1.0 at a streak of 0, plus 0.1 for each answer in your
+  streak (×2 at 10, ×3 at 20), up to ×5 at 40. It is the × number shown under
+  your score, and it is the streak you had going into the question.
+- **Speed bonus:** up to +50% for an instant answer, fading evenly to nothing at
+  the par time. Par is the real SAT's pace, 95 seconds for Math and 71 for
+  Reading & Writing, or the timer length when the timer is on. A slow right
+  answer still earns base × streak, and a miss never takes points away.
+
+The result is rounded to the nearest 5. The line under your score shows how the
+last answer was worked out. `POINTS` near the top of the script holds all of
+these numbers. Your best score is saved in your browser.
 
 **The rules.** You start each run with 3 lives, shown as hearts at the top. A
 wrong answer (or running out of time) costs a life. It shows you the right
@@ -28,7 +46,7 @@ install or build.
   timer (20, 40 or 75 seconds), and sound. Mixed gives an even split: each
   question's section is a coin flip, but neither section can get more than two
   questions ahead of the other in a run.
-- Your best streak and highest tier are saved in your browser.
+- Your best score, best streak and highest tier are saved in your browser.
 
 ## Where the questions come from
 
