@@ -74,6 +74,18 @@ button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-o
 .tierpill { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; padding: 8px 14px; border-radius: 999px; background: rgba(10, 12, 20, 0.6); border: 1px solid var(--card-line); color: var(--accent2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: color .6s, border-color .6s; }
 .tierpill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .tierpill.bump { animation: bump .5s var(--spring); }
+.topmid { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.hearts { display: flex; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(10, 12, 20, .5); border: 1px solid var(--card-line); }
+.heart { width: 22px; height: 22px; display: block; fill: #ff4d6d; stroke: #ff4d6d; stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(255, 77, 109, .7)); transition: fill .3s, stroke .3s, filter .3s; }
+.heart.gone { fill: rgba(255, 255, 255, .06); stroke: rgba(255, 255, 255, .34); filter: none; }
+.heart.lose { animation: heartLose .7s ease-out; }
+.heart.gain { animation: heartGain .7s var(--spring); }
+@keyframes heartLose { 0% { transform: scale(1); fill: #ff4d6d; stroke: #ff4d6d; } 25% { transform: scale(1.5) rotate(-12deg); fill: #fff; stroke: #fff; } 60% { transform: scale(.6) rotate(8deg); } 100% { transform: scale(1); } }
+@keyframes heartGain { 0% { transform: scale(.3); } 55% { transform: scale(1.6); filter: drop-shadow(0 0 14px #fff); } 100% { transform: scale(1); } }
+.tierup .life { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 77, 109, .2); border: 1px solid rgba(255, 77, 109, .6); color: #fff; font-weight: 800; font-size: 15px; animation: fadeUp .4s ease-out backwards .85s; }
+.tierup .life .heart { width: 18px; height: 18px; }
+.cardreview .lives { margin: 12px 0 0; font-weight: 800; color: #ff8fa3; }
+.cardreview .lives + .back { margin-top: 4px; }
 @keyframes bump { 40% { transform: scale(1.18); } }
 
 /* ---------- start screen ---------- */
@@ -87,7 +99,9 @@ button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-o
 .logo span { background: linear-gradient(100deg, var(--accent) 20%, #fff 40%, var(--accent2) 60%, var(--accent) 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 5s linear infinite; }
 @keyframes shimmer { from { background-position: 125% 0; } to { background-position: -125% 0; } }
 .tag { color: var(--muted); margin: 12px auto 20px; max-width: 420px; }
-.records { display: grid; grid-template-columns: auto auto; gap: 12px; margin-bottom: 14px; }
+.records { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.record.main { grid-column: span 2; }
+.record.main b { font-size: clamp(34px, 11vw, 54px); }
 .record { padding: 16px 10px; min-width: 0; }
 @media (max-width: 360px) { .record span { letter-spacing: .06em; font-size: 11px; } }
 .record b { display: block; font-family: var(--display); font-size: clamp(23px, 7.4vw, 36px); font-weight: 900; line-height: 1.1; }
@@ -149,14 +163,26 @@ button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-o
   color: #fff; text-shadow: 0 0 18px var(--glow), 0 0 50px var(--glow);
   display: inline-block;
 }
+.counter.wide { font-size: clamp(56px, 15.5vw, 124px); }  /* 6 or 7 characters, like 12,430 */
+.counter.huge { font-size: clamp(44px, 12vw, 100px); }    /* longer still */
 .counter .num { display: inline-block; transform-origin: 50% 60%; }
 .counter .num.in { animation: numIn .45s var(--spring) both; }
 .counter .ghost { position: absolute; left: 0; right: 0; top: 0; animation: numOut .28s ease-in both; pointer-events: none; }
 @keyframes numIn { 0% { transform: translateY(42%) scale(.55); opacity: 0; } 55% { transform: translateY(-5%) scale(1.22) rotate(-3deg); opacity: 1; } 100% { transform: none; } }
 @keyframes numOut { to { transform: translateY(-55%) scale(.7); opacity: 0; } }
+.statrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
+.stat { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: rgba(10, 12, 20, .55); border: 1px solid var(--card-line); font-size: 13px; font-weight: 800; white-space: nowrap; }
+.stat i { font-style: normal; font-weight: 700; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.stat.mult { color: #0a0c14; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-color: transparent; }
+.stat.bump { animation: bump .5s var(--spring); }
+.stat.drop { animation: statDrop .6s ease-out; }
+@keyframes statDrop { 0%, 60% { background: rgba(255, 77, 94, .55); border-color: var(--bad); transform: scale(1.12); } 100% { transform: none; } }
+.lastgain { min-height: 18px; margin-top: 6px; color: var(--accent2); font-size: 13px; font-weight: 700; text-shadow: 0 1px 8px rgba(0, 0, 0, .7); }
+.lastgain.show { animation: fadeUp .35s ease-out; }
+body.calc-compact .statrow, body.calc-compact .lastgain { display: none; }
 .plus { position: absolute; left: 50%; top: 6%; font-family: var(--display); font-weight: 900; font-size: clamp(22px, 5vw, 32px); color: var(--accent2); text-shadow: 0 0 14px var(--glow); pointer-events: none; animation: plusUp .85s ease-out forwards; }
 @keyframes plusUp { 0% { transform: translateY(22px) scale(.5); opacity: 0; } 20% { transform: translateY(0) scale(1.15); opacity: 1; } 100% { transform: translateY(-44px) scale(1); opacity: 0; } }
-.counterlabel { text-shadow: 0 1px 8px rgba(0,0,0,.7); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; margin-top: -2px; }
+.counterlabel { text-shadow: 0 1px 8px rgba(0,0,0,.7); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; margin-top: 4px; }
 body.fire-counter .counter { color: #fff7d6; animation: fire 1.1s ease-in-out infinite alternate; }
 @keyframes fire {
   0%   { text-shadow: 0 -4px 6px #fff2a8, 0 -12px 18px #ffcc33, 0 -24px 34px #ff7a1a, 0 -40px 60px #ff2d00; }
@@ -203,6 +229,35 @@ body.glow-border .card:not(.correct):not(.failed) { border-color: var(--accent);
 @media (hover: hover) { .answer:hover .k { background: var(--accent); color: #0a0c14; } }
 .answer .t { min-width: 0; overflow-wrap: anywhere; }
 .answer:disabled { cursor: default; transform: none; }
+/* the choice you have picked but not yet checked */
+.answer.picked { border-color: var(--accent); background: linear-gradient(180deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .1)); box-shadow: 0 0 0 2px var(--accent), 0 8px 26px var(--glow); }
+.answer.picked .k { background: var(--accent); color: #0a0c14; transform: scale(1.08); }
+/* typed-answer questions: an answer box, and a number pad on touch screens */
+.answers.typed { display: block; }
+.typedbox { max-width: 420px; margin: 0 auto; }
+.entry { display: flex; align-items: center; justify-content: center; min-height: 68px; padding: 10px 16px; border-radius: 16px; border: 1px solid var(--card-line); background: rgba(10, 12, 20, .45); font: 800 30px/1.1 var(--display); letter-spacing: .04em; cursor: text; transition: border-color .18s, box-shadow .2s, background .2s; }
+.entry:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.entry.has { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 8px 26px var(--glow); }
+.entry .ph { font: 600 16px/1.3 system-ui, sans-serif; letter-spacing: 0; color: var(--muted); }
+.entry .caret { width: 2px; height: 30px; margin-left: 3px; background: var(--accent); animation: caret 1.1s steps(2, start) infinite; }
+@keyframes caret { to { visibility: hidden; } }
+.entry.nudge { animation: wrongShake .42s; }
+.entryhint { margin: 8px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
+.keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.key { min-height: 52px; border-radius: 14px; border: 1px solid var(--card-line); background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .05)); font: 800 21px/1 var(--display); cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; transition: transform .1s, background .15s; }
+.key:active { transform: scale(.95); background: rgba(255, 255, 255, .22); }
+.key.wide { grid-column: span 2; }
+.key:disabled { opacity: .38; cursor: default; transform: none; }
+@media (hover: hover) and (pointer: fine) { .keypad { display: none; } } /* a keyboard is there: just type */
+.answers.done .keypad, .answers.done .entryhint { display: none; } /* once it is marked, make room for the explanation */
+.answers.done .entry { box-shadow: none; }
+.answers.done .entry .caret { display: none; }
+.typedbox.right .entry { border-color: var(--good); background: rgba(62, 224, 138, .2); box-shadow: 0 0 0 1px var(--good), 0 0 26px rgba(62, 224, 138, .45); animation: rightPop .45s var(--spring); }
+.typedbox.wrong .entry { border-color: var(--bad); background: rgba(255, 77, 94, .2); box-shadow: 0 0 0 1px var(--bad), 0 0 26px rgba(255, 77, 94, .45); animation: wrongShake .42s; }
+#btn-check { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+#btn-check:disabled { opacity: .4; box-shadow: none; transform: none; filter: saturate(.5); }
+#btn-check kbd { display: none; font: 800 12px/1 ui-monospace, Menlo, monospace; letter-spacing: 0; text-transform: none; padding: 5px 8px; border-radius: 7px; background: rgba(10, 12, 20, .2); border: 1px solid rgba(10, 12, 20, .28); }
+@media (hover: hover) and (pointer: fine) { #btn-check kbd { display: inline-block; } }
 .answers.done .answer:not(.right):not(.wrong) { opacity: .38; box-shadow: none; border-color: var(--card-line); }
 .answer.right { background: linear-gradient(90deg, rgba(62, 224, 138, .36), rgba(62, 224, 138, .14)); border-color: var(--good); box-shadow: 0 0 0 1px var(--good), 0 0 26px rgba(62, 224, 138, .45); animation: rightPop .45s var(--spring); }
 .answer.right .k { background: var(--good); color: #062612; font-size: 0; transform: scale(1.1); }
@@ -258,9 +313,10 @@ body.shake-hard #app { animation: shakeHard .5s; }
 .overmsg { color: var(--accent2); font-weight: 700; margin: 10px 0 0; min-height: 1.5em; }
 .newbest { display: inline-block; margin-top: 10px; padding: 5px 14px; border-radius: 99px; background: linear-gradient(90deg, #ffd23f, #ff8a00); color: #2a1600; font-weight: 900; letter-spacing: .1em; font-size: 13px; box-shadow: 0 0 24px rgba(255, 190, 40, .6); animation: fadeUp .45s ease-out backwards .9s, pulse 1s ease-in-out 1.4s infinite alternate; }
 @keyframes pulse { to { transform: scale(1.08); } }
-.statline { display: flex; justify-content: center; gap: 12px; margin: 14px 0 6px; }
-.statline > div { flex: 1; max-width: 190px; padding: 10px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); }
-.statline b { display: block; font-family: var(--display); font-size: 26px; line-height: 1.2; }
+.statline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0 6px; }
+@media (max-width: 560px) { .statline { grid-template-columns: 1fr 1fr; } }
+.statline > div { min-width: 0; padding: 10px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); }
+.statline b { display: block; font-family: var(--display); font-size: clamp(20px, 5.6vw, 26px); line-height: 1.2; overflow-wrap: anywhere; }
 .statline span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
 .over .path { margin: 4px 0 6px; }
 .review { text-align: left; background: rgba(255,255,255,.06); border-radius: 16px; padding: 14px 16px; margin-top: 8px; border-left: 3px solid var(--good); }
@@ -355,8 +411,9 @@ body.calc-compact .progress { margin: 4px auto 10px; }
   <!-- START SCREEN -->
   <section id="screen-start" class="start">
     <h1 class="logo">SAT <span>STREAK</span></h1>
-    <p class="tag">Answer real SAT questions in a row. Every right answer grows your streak and powers up the world. A miss sends you back to the start of your level. Reach Legendary and play until you miss.</p>
+    <p class="tag">Answer real SAT questions for points. Harder questions, faster answers and longer streaks score more, and your streak powers up the world. You have 3 lives.</p>
     <div class="records">
+      <div class="record main glass"><b id="bestscore">0</b><span>Best score</span></div>
       <div class="record glass"><b id="best">0</b><span>Best streak</span></div>
       <div class="record glass"><b id="besttier">Spark</b><span>Highest tier</span></div>
     </div>
@@ -395,7 +452,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     </div>
     <button class="bigbtn" id="btn-start">Start streak</button>
     <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
-    <p class="howto">Answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or tap. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. Points for a right answer: 100, 150 or 200 by difficulty, times your streak multiplier (×2 at a streak of 10, up to ×5), plus up to 50% for speed. You have 3 lives: a miss costs one and sends you back to the start of your world, each new world gives one back, and losing all three ends the run. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
     <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
   </section>
 
@@ -403,13 +460,22 @@ body.calc-compact .progress { margin: 4px auto 10px; }
   <section id="screen-game" class="game hidden">
     <div class="topbar">
       <button class="iconbtn" id="btn-home" aria-label="Back to start"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <span class="tierpill" id="tiername">Spark</span>
+      <div class="topmid">
+        <span class="tierpill" id="tiername">Spark</span>
+        <div class="hearts" id="hearts" role="img" aria-label="3 of 3 lives"></div>
+      </div>
       <button class="iconbtn" id="btn-mute" aria-label="Sound on or off"></button>
     </div>
     <div class="counterwrap">
       <div class="halo" id="halo"></div>
       <div class="counter" id="counter" aria-live="polite"><span class="num" id="counter-num">0</span></div>
-      <div class="counterlabel" id="counterlabel">streak</div>
+      <div class="counterlabel" id="counterlabel">points</div>
+      <div class="statrow">
+        <span class="stat" id="stat-streak"><i>Streak</i><b id="stat-streak-n">0</b></span>
+        <span class="stat mult" id="stat-mult" title="Streak multiplier">×1.0</span>
+        <span class="stat" id="stat-acc"><i>Right</i><b id="stat-acc-n">0 of 0</b></span>
+      </div>
+      <div class="lastgain" id="lastgain" aria-live="polite"></div>
     </div>
     <div class="progress">
       <div class="ptrack"><div class="pfill" id="pfill"></div><div class="pticks" id="pticks"></div></div>
@@ -421,10 +487,12 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div class="passage hidden" id="passage"></div>
       <div class="question" id="question"></div>
       <div class="answers" id="answers"></div>
+      <button class="bigbtn hidden" id="btn-check" type="button" disabled>Check answer <kbd aria-hidden="true">Enter ↵</kbd></button>
       <div class="review cardreview hidden" id="cardreview">
         <h3 id="cr-title">Not quite</h3>
         <p class="ans" id="cr-ans"></p>
         <div class="exp" id="cr-exp"></div>
+        <p class="lives" id="cr-lives"></p>
         <p class="back" id="cr-back"></p>
         <p class="qid" id="cr-id"></p>
         <button class="bigbtn" id="btn-continue" type="button">Continue</button>
@@ -434,14 +502,15 @@ body.calc-compact .progress { margin: 4px auto 10px; }
 
   <!-- GAME OVER -->
   <section id="screen-over" class="over glass hidden">
-    <h2 id="over-title">Streak broken</h2>
+    <h2 id="over-title">Out of lives</h2>
     <div class="final" id="final">0</div>
-    <div class="finalsub">final streak</div>
+    <div class="finalsub">points</div>
     <div id="newbest" class="newbest hidden">NEW BEST!</div>
     <p class="overmsg" id="over-msg"></p>
     <div class="statline">
       <div><b id="over-acc">0%</b><span id="over-acc-sub">accuracy</span></div>
-      <div><b id="over-best">0</b><span>best ever</span></div>
+      <div><b id="over-best">0</b><span>best score</span></div>
+      <div><b id="over-streak">0</b><span>longest streak</span></div>
       <div><b id="over-tier">Spark</b><span>tier reached</span></div>
     </div>
     <div class="path" id="over-path" aria-hidden="true"></div>
@@ -484,6 +553,8 @@ body.calc-compact .progress { margin: 4px auto 10px; }
        choices: ["2", "3", "4", "6"],          // four, in A B C D order
        answer: "C",
        explanation: "Divide both sides by 3: x = 4." },
+   For a typed-answer question, leave out `choices` and `answer` and give
+   `kind: "typed", answers: ["7/2", "3.5"]` (every form that counts).
    ===================================================================== */
 const QUESTIONS = [];
 
@@ -538,7 +609,7 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "11";
+const BUILD = "16";
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -546,6 +617,36 @@ const BUILD = "11";
    here, the calculator is built into the page instead. */
 const DESMOS_API_KEY = "";
 const DESMOS_URL = "https://www.desmos.com/calculator";
+
+/* Lives. You start a run with this many. A miss costs one, reaching a new world
+   gives one back (never more than this many), and the run ends when none are left. */
+const LIVES = 3;
+
+/* Points, the main score. A right answer earns the base for its difficulty, times a
+   streak multiplier, plus a speed bonus:
+     points = base x (1 + streak x perStreak, up to maxMultiplier) x (1 + speed bonus)
+   The speed bonus starts at speedBonus (0.5 = +50%) for an instant answer and fades
+   evenly to nothing at the par time. Par is the real SAT's pace per question, or the
+   timer length when the timer is on. A slow answer still earns base x streak. */
+const POINTS = {
+  base: [100, 150, 200],                          // easy, medium, hard
+  perStreak: 0.1,                                 // streak 10 = x2, streak 20 = x3
+  maxMultiplier: 5,                               // reached at streak 40
+  speedBonus: 0.5,
+  par: { "Math": 95, "Reading & Writing": 71 },   // seconds per question on the SAT
+};
+const Score = {
+  multiplier(streak) { return Math.min(POINTS.maxMultiplier, 1 + streak * POINTS.perStreak); },
+  par(q) { return Store.data.timer ? Store.data.seconds : POINTS.par[q.section] || 75; },
+  // `streak` is the streak going into the question; `seconds` is how long the answer took.
+  points(q, streak, seconds) {
+    const base = POINTS.base[(q.difficulty || 2) - 1] || POINTS.base[1];
+    const mult = this.multiplier(streak);
+    const speed = POINTS.speedBonus * Math.max(0, 1 - Math.max(0, seconds) / this.par(q));
+    return { base, mult, speed, total: Math.round((base * mult * (1 + speed)) / 5) * 5 };
+  },
+  show(n) { return Math.round(n).toLocaleString("en-US"); },
+};
 
 /* Messages that pop up when you reach these streaks. */
 const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Absolutely locked in! 🌌", 50: "LEGENDARY! 👑", 100: "SAT GOD MODE 🏆" };
@@ -555,7 +656,7 @@ const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Abs
    ===================================================================== */
 const STORE_KEY = "satStreak.v1";
 const Store = {
-  data: { best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false },
+  data: { bestScore: 0, best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false },
   load() {
     try { Object.assign(this.data, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch (e) { /* private mode: no saving */ }
   },
@@ -593,6 +694,78 @@ const Seen = {
 };
 Seen.load();
 
+/* Mixed mode deals Math and Reading & Writing evenly. Each question's section is
+   a coin flip, but neither section may get more than 2 questions ahead in a run,
+   so the two stay level and you never get a long run of one. `lead` is the
+   number of Math questions dealt this run minus the Reading & Writing ones. */
+const Mix = {
+  lead: 0,
+  pick() { return this.lead >= 2 ? "rw" : this.lead <= -2 ? "math" : Math.random() < 0.5 ? "math" : "rw"; },
+  dealt(sec, n = 1) { this.lead += sec === "math" ? n : -n; },
+  reset() { this.lead = 0; },
+};
+
+/* Typed answers (the SAT's free response questions), graded the way the SAT grades
+   them. Any correct form counts (7/2 or 3.5). A decimal that doesn't fit may be cut
+   off or rounded, as long as it fills the answer box (2/3 as .6666, .6667 or 0.666,
+   but not 0.66). */
+const Typed = {
+  FORM: /^-?(?:\d+\/\d+|\d+\.?\d*|\.\d+)$/,     // a whole number, a decimal or a fraction
+  PARTIAL: /^-?(?:\d*\.?\d*|\d+\/\d*)$/,         // something still being typed
+  clean(s) { return String(s == null ? "" : s).replace(/<[^>]*>/g, "").replace(/\u2212/g, "-").replace(/\s+/g, ""); },
+  value(s) {
+    s = this.clean(s);
+    if (!this.FORM.test(s)) return NaN;
+    if (s.includes("/")) { const [a, b] = s.split("/"); return +b === 0 ? NaN : +a / +b; }
+    return +s;
+  },
+  valid(s) { return !Number.isNaN(this.value(s)); },
+  // How many characters the answer box takes, not counting a minus sign (5 on the SAT).
+  limit(answers) { return Math.max(5, ...answers.map((a) => this.clean(a).replace("-", "").length)); },
+  matches(input, answers) {
+    const text = this.clean(input), v = this.value(text);
+    if (Number.isNaN(v)) return false;
+    const same = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
+    const decimals = text.includes("/") || !text.includes(".") ? 0 : text.length - text.indexOf(".") - 1;
+    const full = decimals >= 3 || text.replace("-", "").length >= 5; // it fills the answer box
+    return answers.some((a) => {
+      const want = this.value(a);
+      if (Number.isNaN(want)) return false;
+      if (same(v, want)) return true;
+      if (!decimals || !full) return false;
+      const p = 10 ** decimals, nudge = Math.sign(want) * 1e-9;
+      return same(v, Math.trunc(want * p + nudge) / p) || same(v, Math.round(want * p + nudge) / p);
+    });
+  },
+};
+
+/* When a reply from College Board can't be used, the game remembers what kind of
+   reply it was (field names and the look of the answer key, never the question),
+   so a problem can be tracked down. Open index.html?debug to see the notes. */
+const DEBUG_KEY = "satStreak.debug";
+const Debug = {
+  note(meta, raw) {
+    try {
+      const look = (v) => String(v).replace(/[a-z]/gi, "a").replace(/\d/g, "9").slice(0, 12);
+      const item = Array.isArray(raw) ? raw[0] : raw, key = item && item.correct_answer;
+      const row = { section: meta.section, format: meta.externalId ? "new" : "old", type: String((item && item.type) || ""), fields: Object.keys(item || {}).slice(0, 30), key: Array.isArray(key) ? key.map(look) : look(key), options: Array.isArray(item && item.answerOptions) ? item.answerOptions.length : null };
+      const all = JSON.parse(localStorage.getItem(DEBUG_KEY) || "[]");
+      if (all.some((r) => r.type === row.type && String(r.key) === String(row.key))) return;
+      all.push(row);
+      localStorage.setItem(DEBUG_KEY, JSON.stringify(all.slice(-12)));
+    } catch (e) { /* private mode: no notes */ }
+  },
+  show() {
+    let text = "[]";
+    try { text = JSON.stringify(JSON.parse(localStorage.getItem(DEBUG_KEY) || "[]"), null, 1); } catch (e) { /* ignore */ }
+    const box = document.createElement("pre");
+    box.id = "debug";
+    box.style.cssText = "position:fixed;inset:0;z-index:99;margin:0;padding:20px;overflow:auto;background:#0b0d16;color:#e8ecff;font:13px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap";
+    box.textContent = "Replies the game could not use (version " + BUILD + ")\n\n" + text;
+    document.body.appendChild(box);
+  },
+};
+
 /* =====================================================================
    3b. COLLEGE BOARD SOURCE (live)
    Questions come straight from the public JSON endpoints behind the College
@@ -621,7 +794,7 @@ const CB = {
   error: "",
   queue: [],          // prefetched questions (promises)
   notice: "",         // a short message for the player, shown with the next question
-  reviewing: false,   // true while the questions you missed are coming back
+  reviewing: {},      // per section: true while the questions you missed are coming back
   reserved: new Set(),
   DIFF: { E: 1, M: 2, H: 3 },
 
@@ -691,21 +864,22 @@ const CB = {
     return c;
   },
 
-  // Choose a random question id you haven't been shown, with difficulty weighted by the tier.
-  pickMeta(tierIndex) {
-    const sec = Store.data.section;
-    const mine = this.list.filter((r) => sec === "mixed" || (sec === "math") === (r.section === "Math"));
+  // Choose a random question id you haven't been shown from one section ("math" or "rw"),
+  // with difficulty weighted by the tier.
+  pickMeta(tierIndex, sec) {
+    const mine = this.list.filter((r) => (sec === "math") === (r.section === "Math"));
+    const name = sec === "math" ? "Math" : "Reading & Writing";
     const free = (r) => !Game.used.has("cb-" + r.questionId) && !this.reserved.has(r.questionId) && !Seen.skip.has(String(r.questionId));
     let pool = mine.filter((r) => free(r) && !Seen.ids.has(String(r.questionId)));
     if (!pool.length && mine.some((r) => Seen.ids.has(String(r.questionId)))) {
       // You have been through every question here. The ones you got wrong come
       // back first; after those, the whole set starts over.
       pool = mine.filter((r) => free(r) && Seen.missed.has(String(r.questionId)));
-      if (pool.length) { if (!this.reviewing) this.notice = "You have seen every question. Here are the ones you missed."; this.reviewing = true; }
-      else {
+      if (pool.length) { if (!this.reviewing[sec]) this.notice = "You have seen every " + name + " question. Here are the ones you missed."; this.reviewing[sec] = true; }
+      else if (mine.some(free)) { // (if this run has used them all, there is nothing to start over with yet)
         Seen.forget(mine.map((r) => r.questionId));
-        this.reviewing = false;
-        this.notice = "You have seen every question. Starting the set over.";
+        this.reviewing[sec] = false;
+        this.notice = "You have seen every " + name + " question. Starting the set over.";
         pool = mine.filter(free);
       }
     }
@@ -728,14 +902,41 @@ const CB = {
     return found.size === 1 ? [...found][0] : "";
   },
 
+  // The answer the explanation states as a plain number ("The correct answer is 3.5."), or "".
+  numberFromRationale(html) {
+    const text = String(html || "").replace(/<math[\s\S]*?<\/math>/gi, " § ").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&minus;|\u2212/g, "-").replace(/\s+/g, " ");
+    const m = /correct answer is (-?[\d.\/]+?)\.?(?= |$)/i.exec(text);
+    return m && Typed.valid(m[1]) ? m[1] : "";
+  },
+
+  // A typed-answer question. It is used only when every listed answer is a plain number
+  // or fraction and the explanation, where it states the answer that way, agrees.
+  normalizeTyped(meta, raw) {
+    const listed = (Array.isArray(raw.correct_answer) ? raw.correct_answer : [raw.correct_answer]).map((a) => Typed.clean(a)).filter(Boolean);
+    const answers = [...new Set(listed)];
+    if (!answers.length || !answers.every((a) => Typed.valid(a))) return null;
+    const question = sanitize(raw.stem);
+    if (!hasContent(question)) return null;
+    const said = this.numberFromRationale(raw.rationale);
+    if (said && !Typed.matches(said, answers) && !answers.some((a) => Typed.matches(a, [said]))) return null;
+    return {
+      id: "cb-" + meta.questionId, ref: String(meta.questionId), html: true, source: "College Board",
+      section: meta.section, topic: meta.topic, difficulty: this.DIFF[meta.difficulty] || 2,
+      passage: sanitize(raw.stimulus), question, kind: "typed", choices: [], answers, answer: answers.join(" or "),
+      explanation: sanitize(raw.rationale),
+    };
+  },
+
   // Turn College Board's reply into the game's question format (or null to skip it).
   // A question is only used when everything that says which choice is right agrees:
   // the answer letter, the answer id, and the explanation. Anything unclear is skipped.
   normalize(meta, raw) {
     let passage, question, choices, answer, explanation;
     if (meta.externalId) {
-      if (String(raw.type || "").toLowerCase() !== "mcq") return null; // typed-answer question
       const opts = Array.isArray(raw.answerOptions) ? raw.answerOptions : [];
+      const type = String(raw.type || "").toLowerCase();
+      if (type === "spr" || (type !== "mcq" && !opts.length)) return this.normalizeTyped(meta, raw); // typed-answer question
+      if (type !== "mcq") return null;
       const correct = Array.isArray(raw.correct_answer) ? raw.correct_answer : [raw.correct_answer];
       if (correct.length !== 1) return null;                           // no single right answer
       passage = raw.stimulus; question = raw.stem; explanation = raw.rationale;
@@ -754,7 +955,7 @@ const CB = {
       choices = Object.keys(ch).length === 4 ? ["a", "b", "c", "d"].map(pick) : [];
       answer = String(ans.correct_choice || "").trim().toUpperCase();
     }
-    // The game has four answer buttons, so anything else is skipped.
+    // A multiple-choice question needs exactly four choices, so anything else is skipped.
     if (!question || choices.length !== 4 || answer.length !== 1 || !"ABCD".includes(answer)) return null;
     const said = this.keyFromRationale(explanation);
     if (said && said !== answer) return null;                          // explanation disagrees with the key
@@ -769,9 +970,18 @@ const CB = {
   },
 
   async fetchOne(tierIndex) {
+    // Mixed: the section is chosen first and kept while retrying, so questions the
+    // game has to skip (typed-answer math, for example) can't tilt the mix.
+    const mixed = Store.data.section === "mixed";
+    let sec = mixed ? Mix.pick() : Store.data.section;
+    if (mixed) Mix.dealt(sec);
     for (let tries = 0; tries < 6; tries++) {
-      const meta = this.pickMeta(tierIndex);
-      if (!meta) return null;
+      let meta = this.pickMeta(tierIndex, sec);
+      if (!meta && mixed) { // nothing left in this section: use the other one
+        Mix.dealt(sec, -1); sec = sec === "math" ? "rw" : "math"; Mix.dealt(sec);
+        meta = this.pickMeta(tierIndex, sec);
+      }
+      if (!meta) break;
       this.reserved.add(meta.questionId);
       try {
         const u = this.urls();
@@ -780,8 +990,10 @@ const CB = {
         const q = raw && this.normalize(meta, raw);
         if (q) { q.notice = this.notice; this.notice = ""; return q; } // the notice goes with the question it is about
         Seen.unusable(meta.questionId); // answered, but not a question the game can use
+        if (raw) Debug.note(meta, raw);
       } catch (e) { /* try another question */ }
     }
+    if (mixed) Mix.dealt(sec, -1); // no question came of it, so it doesn't count
     return null;
   },
 
@@ -894,6 +1106,7 @@ function selfTest() {
   const old = { questionId: "t2", ibn: "i1", section: "Math", topic: "", difficulty: "E" };
   const opts = (texts) => texts.map((t, i) => ({ id: "id" + i, content: "<p>" + t + "</p>" }));
   const mcq = (over) => Object.assign({ type: "mcq", stem: "<p>Pick one.</p>", stimulus: "", answerOptions: opts(["w", "x", "y", "z"]), correct_answer: ["C"], keys: ["id2"], rationale: "<p>Choice C is the best answer.</p><p>Choice A is incorrect.</p>" }, over);
+  const spr = (over) => Object.assign({ type: "spr", stem: "<p>What is x?</p>", stimulus: "", correct_answer: ["7/2", "3.5"], rationale: "<p>The correct answer is 3.5. Note that 7/2 and 3.5 are ways to enter it.</p>" }, over);
   const disclosed = (over) => [{ prompt: "<p>Pick one.</p>", body: "", answer: Object.assign({ choices: { d: { body: "<p>z</p>" }, a: { body: "<p>w</p>" }, c: { body: "<p>y</p>" }, b: { body: "<p>x</p>" } }, correct_choice: "b", rationale: "<p>Choice B is correct.</p>" }, over) }];
   const text = (html) => { const d = document.createElement("div"); d.innerHTML = html; d.querySelectorAll(".sr-only").forEach((e) => e.remove()); return d.textContent.replace(/\s+/g, " ").trim(); };
   const n = (m, raw) => CB.normalize(m, raw);
@@ -917,12 +1130,31 @@ function selfTest() {
     ["answer: explanation names no choice, letter is used", (n(meta, mcq({ rationale: "<p>Because of the slope.</p>" })) || {}).answer === "C"],
     ["answer: two right answers listed, skipped", n(meta, mcq({ correct_answer: ["A", "C"] })) === null],
     ["answer: no answer given, skipped", n(meta, mcq({ correct_answer: [] })) === null],
-    ["answer: typed-answer question, skipped", n(meta, mcq({ type: "spr", correct_answer: ["7"] })) === null],
+    ["typed: a typed-answer question is read", (() => { const q = n(meta, spr({})); return !!q && q.kind === "typed" && q.answers.join() === "7/2,3.5"; })()],
+    ["typed: an answer key that isn't a number, skipped", n(meta, spr({ correct_answer: ["x=3"] })) === null],
+    ["typed: no answer key, skipped", n(meta, spr({ correct_answer: [] })) === null],
+    ["typed: explanation states another number, skipped", n(meta, spr({ rationale: "<p>The correct answer is 4. More.</p>" })) === null],
+    ["typed: explanation states the answer as math, key is used", !!n(meta, spr({ rationale: "<p>The correct answer is <math><mfrac><mn>7</mn><mn>2</mn></mfrac></math>.</p>" }))],
+    ["typed: any correct form counts", ["7/2", "3.5", "3.50", "14/4"].every((a) => Typed.matches(a, ["7/2", "3.5"])) && !Typed.matches("3.4", ["7/2", "3.5"])],
+    ["typed: long decimals may be cut off or rounded", [".6666", ".6667", "0.666", "0.667", "2/3"].every((a) => Typed.matches(a, ["2/3"]))],
+    ["typed: a decimal cut too short is wrong", ["0.66", ".67", "0.7", "1"].every((a) => !Typed.matches(a, ["2/3"]))],
+    ["typed: negatives", Typed.matches("-.5", ["-1/2"]) && Typed.matches("-1/2", ["-0.5"]) && !Typed.matches(".5", ["-1/2"]) && Typed.matches("-.333", ["-1/3"])],
+    ["typed: half-typed answers are not numbers", ["", "-", "3/", ".", "1/0", "1/2/3", "abc"].every((a) => !Typed.valid(a)) && ["5", "5.", ".5", "-5", "12/5"].every((a) => Typed.valid(a))],
     ["answer: an empty choice, skipped", n(meta, mcq({ answerOptions: opts(["w", "", "y", "z"]) })) === null],
     ["answer: three choices, skipped", n(meta, mcq({ answerOptions: opts(["w", "x", "y"]) })) === null],
     ["older format: choices are placed by letter, not arrival order", (() => { const q = n(old, disclosed({})); return !!q && q.answer === "B" && q.choices.map(text).join("") === "wxyz"; })()],
     ["older format: no answer key, skipped", n(old, disclosed({ correct_choice: "" })) === null],
     ["older format: explanation disagrees, skipped", n(old, disclosed({ rationale: "<p>Choice D is correct.</p>" })) === null],
+    ["points: difficulty sets the base", (() => { const t = Store.data.timer; Store.data.timer = false; const p = (d, st, sec) => Score.points({ section: "Math", difficulty: d }, st, sec).total; const ok = p(1, 0, 999) === 100 && p(2, 0, 999) === 150 && p(3, 0, 999) === 200; Store.data.timer = t; return ok; })()],
+    ["points: the streak multiplies, up to 5 times", (() => { const t = Store.data.timer; Store.data.timer = false; const p = (st) => Score.points({ section: "Math", difficulty: 1 }, st, 999).total; const ok = p(0) === 100 && p(1) === 110 && p(10) === 200 && p(40) === 500 && p(90) === 500; Store.data.timer = t; return ok; })()],
+    ["points: speed adds up to half, and a slow answer loses nothing", (() => { const t = Store.data.timer; Store.data.timer = false; const p = (sec) => Score.points({ section: "Math", difficulty: 1 }, 0, sec).total; const ok = p(0) === 150 && p(47.5) === 125 && p(95) === 100 && p(500) === 100; Store.data.timer = t; return ok; })()],
+    ["mixed: Math and Reading & Writing stay within 2 of each other", (() => {
+      const keep = Mix.lead; let ok = true, math = 0;
+      Mix.reset();
+      for (let i = 0; i < 400; i++) { const s = Mix.pick(); Mix.dealt(s); if (s === "math") math++; if (Math.abs(Mix.lead) > 2) ok = false; }
+      Mix.lead = keep;
+      return ok && Math.abs(math - 200) <= 1;
+    })()],
   ];
   const failed = checks.filter(([, ok]) => !ok);
   const box = document.createElement("pre");
@@ -1511,8 +1743,15 @@ const Sound = {
 const Game = {
   streak: 0, tierIndex: 0, peakTierThisRun: 0, used: new Set(), current: null, order: null,
   correct: 0, answered: 0,  // counted over the whole run, for the accuracy shown at the end
+  lives: LIVES,             // a miss costs one; a new world gives one back; none left ends the run
+  score: 0, peakStreak: 0,  // points this run, and the longest streak reached in it
+  shownAt: 0,               // when the current question appeared, for the speed bonus
+  lastGain: null,           // how the last right answer's points were worked out
   reviewing: false,         // true while the explanation of a missed question is on screen
   locked: false, timerId: null, timeLeft: 0,
+  selected: null,           // the choice you have picked but not yet checked (its place on screen)
+  entry: "",                // what you have typed so far on a typed-answer question
+  missAt: 0,                // when the last miss happened, so one press of Enter can't both check and continue
 
   tierFor(streak) { let i = 0; TIERS.forEach((t, k) => { if (streak >= t.min) i = k; }); return i; },
 
@@ -1526,21 +1765,31 @@ const Game = {
     if (!this.pool().length) return null;
     let pool = this.pool().filter((q) => !this.used.has(q.id));
     if (!pool.length) { this.used.clear(); if (this.current) this.used.add(this.current.id); pool = this.pool().filter((q) => !this.used.has(q.id)); }
+    // Mixed: choose the section first so the two come up evenly. If it has run out, use the other.
+    const mixed = Store.data.section === "mixed";
+    if (mixed) {
+      const want = Mix.pick(), inSection = pool.filter((q) => (q.section === "Math") === (want === "math"));
+      if (inSection.length) pool = inSection;
+    }
     const w = TIERS[this.tierIndex].difficulty;
     const avail = [1, 2, 3].filter((d) => pool.some((q) => q.difficulty === d));
     const total = avail.reduce((s, d) => s + w[d - 1], 0);
     let r = Math.random() * total, diff = avail[avail.length - 1];
     for (const d of avail) { r -= w[d - 1]; if (r <= 0) { diff = d; break; } }
     const list = pool.filter((q) => q.difficulty === diff);
-    return list[Math.floor(Math.random() * list.length)];
+    const q = list[Math.floor(Math.random() * list.length)];
+    if (mixed && q) Mix.dealt(q.section === "Math" ? "math" : "rw");
+    return q;
   },
 
   start() {
     Sound.ensure();
     this.streak = 0; this.tierIndex = 0; this.peakTierThisRun = 0; this.used.clear(); this.current = null;
     this.correct = 0; this.answered = 0; this.reviewing = false;
+    this.lives = LIVES; UI.renderLives();
+    this.score = 0; this.peakStreak = 0; this.lastGain = null;
     this.run = (this.run || 0) + 1;
-    CB.reset();
+    CB.reset(); Mix.reset();
     Visuals.setTier(0);
     UI.show("game");
     UI.renderStreak(false);
@@ -1565,8 +1814,9 @@ const Game = {
     // Built-in answers are shuffled. College Board ones keep A-D order because
     // their explanations refer to the choices by letter.
     this.order = this.current.html ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
-    this.locked = false;
+    this.locked = false; this.selected = null; this.entry = "";
     UI.renderQuestion(this.current, this.order);
+    this.shownAt = performance.now();
     this.startTimer();
   },
 
@@ -1578,8 +1828,51 @@ const Game = {
     this.timerId = setInterval(() => {
       const left = 1 - (performance.now() - started) / (total * 1000);
       UI.timer(Math.max(0, left));
-      if (left <= 0) { clearInterval(this.timerId); this.miss(null, true); }
+      if (left <= 0) { // out of time: a choice you had picked is checked, otherwise it is a miss
+        clearInterval(this.timerId);
+        const ready = this.isTyped() ? Typed.valid(this.entry) : this.selected != null && !UI.isOut(this.selected);
+        if (ready) this.submit(); else this.miss(null, true);
+      }
     }, 100);
+  },
+
+  isTyped() { return !!this.current && this.current.kind === "typed"; },
+
+  // One key of a typed answer: a digit, ".", "/", "-" (flips the sign) or "back".
+  type(key) {
+    if (this.locked || !this.isTyped()) return;
+    let v = this.entry;
+    if (key === "back") v = v.slice(0, -1);
+    else if (key === "-") v = v.startsWith("-") ? v.slice(1) : "-" + v;
+    else if (/^[\d.\/]$/.test(key)) v += key;
+    else return;
+    if (!Typed.PARTIAL.test(v) || v.replace("-", "").length > Typed.limit(this.current.answers)) { UI.nudgeEntry(); return; }
+    if (v !== this.entry) Sound.tap();
+    this.entry = v;
+    UI.showEntry(v);
+  },
+
+  // Picking a choice only selects it. You can change your mind until you check it.
+  select(displayIndex) {
+    if (this.locked || !this.current || this.isTyped()) return;
+    if (UI.isOut(displayIndex)) return; // crossed out: bring it back first
+    if (this.selected !== displayIndex) Sound.tap();
+    this.selected = displayIndex;
+    UI.showSelected(displayIndex);
+  },
+
+  deselect() { if (this.locked) return; this.selected = null; UI.showSelected(null); },
+
+  // Check the picked choice (the Check answer button, or Enter).
+  submit() {
+    if (this.locked || !this.current) return;
+    if (this.isTyped()) {
+      if (!Typed.valid(this.entry)) { UI.nudgeEntry(); return; } // "3/" is not an answer yet
+      if (Typed.matches(this.entry, this.current.answers)) this.hit(0); else this.miss(0, false);
+      return;
+    }
+    if (this.selected == null) return;
+    this.answer(this.selected);
   },
 
   answer(displayIndex) {
@@ -1593,13 +1886,21 @@ const Game = {
     this.locked = true;
     if (this.current.source === "College Board") Seen.answered(this.current.ref, true);
     clearInterval(this.timerId);
+    // Scored with the streak you had going into the question: the multiplier shown on screen.
+    const gain = Score.points(this.current, this.streak, (performance.now() - this.shownAt) / 1000);
     this.streak++; this.correct++; this.answered++;
+    this.peakStreak = Math.max(this.peakStreak, this.streak);
+    gain.difficulty = ["Easy", "Medium", "Hard"][(this.current.difficulty || 2) - 1];
+    this.score += gain.total; this.lastGain = gain;
+    if (this.score > Store.data.bestScore) Store.data.bestScore = this.score;
     UI.markRight(displayIndex);
     Sound.ding(this.streak);
     UI.buzz(12);
     const streak = this.streak, run = this.run;
     const newTier = this.tierFor(streak), tier = TIERS[newTier], tieredUp = newTier > this.tierIndex;
+    const lifeBack = tieredUp && this.lives < LIVES; // a new world gives one life back, up to the full set
     if (tieredUp) { this.tierIndex = newTier; this.peakTierThisRun = Math.max(this.peakTierThisRun, newTier); }
+    if (lifeBack) this.lives++;
     if (streak > Store.data.best) Store.data.best = streak;
     if (newTier > Store.data.highestTier) Store.data.highestTier = newTier;
     Store.save();
@@ -1616,7 +1917,8 @@ const Game = {
       if (tieredUp) {
         Visuals.setTier(newTier);
         Sound.tierUp();
-        UI.tierUp(newTier, MILESTONES[streak]);
+        UI.tierUp(newTier, MILESTONES[streak], lifeBack);
+        if (lifeBack) UI.renderLives("gain");
         Visuals.flash("#ffffff", 0.5, 500);
         Visuals.burst(W / 2, H / 2, colors, 130, 560);
         Visuals.ring(W / 2, H / 2, tier.colors.accent, Math.max(W, H) * 0.7, 0.9, 10);
@@ -1629,40 +1931,42 @@ const Game = {
     setTimeout(() => this.next(), tieredUp ? 1050 : 560);
   },
 
-  /* A miss. Below the last level it is a checkpoint: you see the answer and the
-     explanation, drop back to the start of the level you are in, and carry on.
-     In the last level the first miss ends the run. */
+  /* A miss costs a life. While you have lives left it is a checkpoint: you see the
+     answer and the explanation, drop back to the start of the level you are in, and
+     carry on. The miss that takes your last life ends the run. */
   miss(displayIndex, timedOut) {
     if (this.locked) return;
-    this.locked = true;
+    this.locked = true; this.missAt = performance.now();
     if (this.current.source === "College Board") Seen.answered(this.current.ref, false); // comes back first once everything has been seen
     clearInterval(this.timerId);
     this.answered++;
-    const correctDisplay = this.order.indexOf("ABCD".indexOf(this.current.answer));
+    const correctDisplay = this.isTyped() ? null : this.order.indexOf("ABCD".indexOf(this.current.answer));
     UI.markWrong(displayIndex, correctDisplay);
     Sound.break();
     UI.buzz([40, 50, 90]);
     UI.shake(true);
     Visuals.flash("#ff2b40", 0.38, 600);
     const run = this.run, tier = TIERS[this.tierIndex];
-    if (this.tierIndex < TIERS.length - 1) {
+    this.lives = Math.max(0, this.lives - 1);
+    UI.renderLives("lose");
+    if (this.lives > 0) {
       const from = this.streak;
       this.reviewing = true;
-      UI.showReview({ q: this.current, timedOut, from, to: tier.min, tier });
+      UI.showReview({ q: this.current, timedOut, from, to: tier.min, tier, lives: this.lives });
       setTimeout(() => {
         if (run !== this.run || !this.reviewing) return;
         this.streak = tier.min;
         UI.renderStreak(false);
-        if (from !== tier.min) { const at = UI.counterRect(); UI.dropCounter(); Visuals.ring(at.x, at.y, "#ff4d5e", 150, 0.6); Visuals.burst(at.x, at.y, ["#ff4d5e", "#ff9aa5", "#ffffff"], 26, 260); }
+        if (from !== tier.min) { const at = UI.streakRect(); UI.dropCounter(); Visuals.ring(at.x, at.y, "#ff4d5e", 150, 0.6); Visuals.burst(at.x, at.y, ["#ff4d5e", "#ff9aa5", "#ffffff"], 26, 260); }
       }, 450);
       return;
     }
-    const final = this.streak;
-    const isNewBest = final > 0 && final >= Store.data.best && final > (this.bestAtStart || 0);
+    const final = this.score;
+    const isNewBest = final > 0 && final > (this.bestAtStart || 0);
     setTimeout(() => {
       if (run !== this.run) return;
       Visuals.shatter(document.getElementById("card"));
-      UI.showOver({ final, timedOut, isNewBest, q: this.current, peak: this.peakTierThisRun, correct: this.correct, answered: this.answered });
+      UI.showOver({ final, timedOut, isNewBest, q: this.current, peak: this.peakTierThisRun, correct: this.correct, answered: this.answered, streak: this.peakStreak });
       this.streak = 0; this.tierIndex = 0;
       Visuals.setTier(0);
     }, 650);
@@ -1842,6 +2146,7 @@ const Calc = {
   },
 };
 
+const HEART = '<path d="M12 20.5s-7.5-4.6-9.3-9.4C1.5 7.7 3.4 4.5 6.7 4.5c2 0 3.6 1 4.6 2.6l.7 1.1.7-1.1c1-1.6 2.6-2.6 4.6-2.6 3.3 0 5.2 3.2 4 6.6-1.8 4.8-9.3 9.4-9.3 9.4z"/>';
 const ICONS = {
   graph: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c3 0 3-10 6-10s3 7 7 7"/></svg>',
   soundOn: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M16.5 8.5a5 5 0 010 7M19.2 6a8.5 8.5 0 010 12"/></svg>',
@@ -1870,6 +2175,7 @@ const UI = {
   },
 
   renderStart() {
+    $("bestscore").textContent = Score.show(Store.data.bestScore);
     $("best").textContent = Store.data.best;
     const top = TIERS[Store.data.highestTier] || TIERS[0];
     $("besttier").textContent = top.name;
@@ -1908,24 +2214,35 @@ const UI = {
   renderMute() { $("btn-mute").innerHTML = Store.data.muted ? ICONS.soundOff : ICONS.soundOn; },
 
   // pop = the streak just grew: roll the number, pulse the glow and float a "+1".
+  // The points counter, the streak chips under it, the level pill and the progress bar.
+  // `pop` plays the arrival of new points.
   renderStreak(pop) {
     const s = Game.streak, i = Game.tierFor(s), tier = TIERS[i], next = TIERS[i + 1];
-    const c = $("counter"), num = $("counter-num");
-    if (pop && num.textContent !== String(s)) {
+    const c = $("counter"), num = $("counter-num"), text = Score.show(Game.score), gain = Game.lastGain;
+    c.classList.toggle("wide", text.length >= 6 && text.length < 8);
+    c.classList.toggle("huge", text.length >= 8);
+    if (pop && num.textContent !== text) {
       const ghost = num.cloneNode(true);
       ghost.removeAttribute("id"); ghost.className = "num ghost"; ghost.setAttribute("aria-hidden", "true");
       c.appendChild(ghost); setTimeout(() => ghost.remove(), 300);
-      num.textContent = s;
+      num.textContent = text;
       num.classList.remove("in"); void num.offsetWidth; num.classList.add("in");
       const halo = $("halo"); halo.classList.remove("hit"); void halo.offsetWidth; halo.classList.add("hit");
       const plus = document.createElement("div");
-      plus.className = "plus"; plus.textContent = "+1"; plus.setAttribute("aria-hidden", "true");
-      plus.style.left = Math.min(c.parentNode.clientWidth - 48, c.offsetLeft + (c.offsetWidth + num.offsetWidth) / 2 + 4) + "px"; // just right of the number
+      plus.className = "plus"; plus.textContent = "+" + Score.show(gain ? gain.total : 0); plus.setAttribute("aria-hidden", "true");
+      plus.style.left = Math.min(c.parentNode.clientWidth - 96, c.offsetLeft + c.offsetWidth + 4) + "px"; // just right of the number
       c.parentNode.appendChild(plus); setTimeout(() => plus.remove(), 900);
+      for (const id of ["stat-streak", "stat-mult"]) { const el = $(id); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("bump"); }
     } else {
-      num.textContent = s; num.classList.remove("in");
+      num.textContent = text; num.classList.remove("in");
     }
-    $("counterlabel").textContent = Game.answered ? `streak · ${Game.correct} of ${Game.answered} right` : "streak";
+    $("stat-streak-n").textContent = s;
+    $("stat-mult").textContent = "×" + Score.multiplier(s).toFixed(1);
+    $("stat-acc-n").textContent = `${Game.correct} of ${Game.answered}`;
+    // How the last right answer was scored, so the points make sense.
+    const line = $("lastgain"), was = line.textContent;
+    line.textContent = gain ? `+${Score.show(gain.total)} = ${gain.difficulty} ${gain.base} × ${gain.mult.toFixed(1)} streak` + (gain.speed >= 0.005 ? ` + ${Math.round(gain.speed * 100)}% speed` : "") : "";
+    if (pop && line.textContent !== was) { line.classList.remove("show"); void line.offsetWidth; line.classList.add("show"); }
     const pill = $("tiername"), label = `Tier ${i + 1} · ${tier.name}`;
     if (pop && pill.textContent !== label) { pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump"); }
     pill.textContent = label;
@@ -1954,7 +2271,8 @@ const UI = {
     $("card").classList.remove("correct", "failed", "in");
     $("card").style.opacity = 1;
     $("qmeta").innerHTML = ""; $("passage").classList.add("hidden");
-    $("answers").innerHTML = ""; $("answers").classList.remove("done");
+    $("answers").innerHTML = ""; $("answers").classList.remove("done", "typed");
+    $("btn-check").classList.add("hidden"); $("btn-check").disabled = true;
     $("cardreview").classList.add("hidden");
     Highlighter.hideButton();
   },
@@ -1980,7 +2298,7 @@ const UI = {
       const span = document.createElement("span"); span.className = "chip " + cls; span.textContent = txt; $("qmeta").appendChild(span);
     }
     if (q.source) { const span = document.createElement("span"); span.className = "chip"; span.textContent = q.source; $("qmeta").appendChild(span); }
-    { // the cross-out tool: turn it on, then cross out choices you have ruled out
+    if (q.kind !== "typed") { // the cross-out tool: turn it on, then cross out choices you have ruled out
       const b = document.createElement("button");
       b.type = "button"; b.className = "calcbtn"; b.id = "btn-elim";
       b.setAttribute("aria-label", "Cross-out tool: show or hide the cross-out buttons beside each choice");
@@ -2007,7 +2325,18 @@ const UI = {
     $("passage").classList.toggle("hidden", !q.passage);
     this.put($("question"), q.question, q.html);
     const box = $("answers");
-    order.forEach((orig, i) => {
+    if (q.kind === "typed") { // an answer box instead of choices; touch screens also get a number pad
+      box.classList.add("typed");
+      const keys = ["1", "2", "3", "/", "4", "5", "6", ".", "7", "8", "9", "-", "0", "back"];
+      const names = { "/": "Fraction bar", ".": "Decimal point", "-": "Negative", back: "Delete" };
+      box.innerHTML = `<div class="typedbox"><div class="entry" id="entry" tabindex="0" role="group" aria-label="Your answer"><span class="val" aria-live="polite"></span><i class="caret"></i></div>`
+        + `<p class="entryhint">Type a number, a decimal like 3.5 or a fraction like 7/2.</p><div class="keypad">`
+        + keys.map((k) => `<button type="button" class="key${k === "0" || k === "back" ? " wide" : ""}" data-k="${k}"${names[k] ? ` aria-label="${names[k]}"` : ""}>${k === "back" ? "⌫" : k === "-" ? "−" : k}</button>`).join("")
+        + `</div></div>`;
+      for (const b of box.querySelectorAll(".key")) b.onclick = () => Game.type(b.dataset.k);
+      this.showEntry("");
+    }
+    else order.forEach((orig, i) => {
       const b = document.createElement("button");
       b.className = "answer";
       b.style.setProperty("--i", i);
@@ -2019,22 +2348,48 @@ const UI = {
       b.onclick = (e) => {
         if (e.target.closest && e.target.closest(".strike")) return;
         if (b.classList.contains("out")) { this.strike(i, false); return; }
-        Game.answer(i);
+        Game.select(i);
       };
+      b.setAttribute("aria-pressed", "false");
       box.appendChild(b);
     });
     box.classList.toggle("elim", !!Store.data.crossOut);
+    $("btn-check").classList.remove("hidden");
     const card = $("card");
     void card.offsetWidth; card.classList.add("in"); // replays the slide-in for every new question
   },
 
   isOut(i) { const b = $("answers").children[i]; return !!b && b.classList.contains("out"); },
 
+  // Show what has been typed so far, and wake the Check answer button once it is a number.
+  showEntry(text) {
+    const el = $("entry"); if (!el) return;
+    const val = el.querySelector(".val");
+    val.textContent = text ? text.replace("-", "−") : "Your answer";
+    val.classList.toggle("ph", !text);
+    el.classList.toggle("has", !!text);
+    const check = $("btn-check");
+    check.disabled = !Typed.valid(text);
+    if (text) check.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
+  },
+
+  // A key that can't go there (a second decimal point, or no room left).
+  nudgeEntry() { const el = $("entry"); if (!el) return; el.classList.remove("nudge"); void el.offsetWidth; el.classList.add("nudge"); },
+
+  // Mark choice i as the picked one (or none), and wake the Check answer button.
+  showSelected(i) {
+    [...$("answers").children].forEach((b, k) => { b.classList.toggle("picked", k === i); b.setAttribute("aria-pressed", String(k === i)); });
+    const check = $("btn-check");
+    check.disabled = i == null;
+    if (i != null) check.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" }); // keep it in view on small screens
+  },
+
   // Cross out choice i, or bring it back. `on` forces one or the other.
   strike(i, on) {
     const b = $("answers").children[i];
     if (!b || b.disabled) return;
     const out = b.classList.toggle("out", on);
+    if (out && Game.selected === i) Game.deselect(); // a crossed-out choice can't stay picked
     const k = b.querySelector(".k").textContent, ctl = b.querySelector(".strike");
     ctl.innerHTML = out ? "Undo" : "<s></s>";
     if (!out) ctl.firstChild.textContent = k;
@@ -2046,7 +2401,9 @@ const UI = {
   lockAnswers() {
     $("card").classList.remove("in");
     $("answers").classList.add("done");
-    for (const b of $("answers").children) b.disabled = true;
+    for (const b of $("answers").children) { b.disabled = true; b.classList.remove("picked"); }
+    for (const b of $("answers").querySelectorAll(".key")) b.disabled = true;
+    $("btn-check").disabled = true;
   },
 
   markRight(i) {
@@ -2059,7 +2416,7 @@ const UI = {
     this.lockAnswers();
     const btns = $("answers").children;
     if (i != null) btns[i].classList.add("wrong");
-    btns[correct].classList.add("right");
+    if (correct != null) btns[correct].classList.add("right");
     $("card").classList.add("failed");
   },
 
@@ -2072,7 +2429,7 @@ const UI = {
   },
 
   counterRect() { const r = $("counter").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
-  answerRect(i) { const r = $("answers").children[i].getBoundingClientRect(); return { x: r.left + Math.min(34, r.width / 2), y: r.top + r.height / 2 }; },
+  answerRect(i) { const r = ($("entry") || $("answers").children[i]).getBoundingClientRect(); return { x: r.left + Math.min(34, r.width / 2), y: r.top + r.height / 2 }; },
 
   shake(hard) {
     const cls = hard ? "shake-hard" : "shake";
@@ -2083,11 +2440,11 @@ const UI = {
   // A short vibration on phones that support it. Follows the sound setting.
   buzz(pattern) { try { if (!Store.data.muted && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* not supported */ } },
 
-  tierUp(index, sub) {
+  tierUp(index, sub, lifeBack) {
     const tier = TIERS[index], next = TIERS[index + 1];
     const el = document.createElement("div");
     el.className = "tierup";
-    el.innerHTML = `<div class="rays"></div><div class="inner"><div class="small">TIER ${index + 1} UNLOCKED</div><div class="name"></div>${sub ? '<div class="sub"></div>' : ""}<div class="goal"></div></div>`;
+    el.innerHTML = `<div class="rays"></div><div class="inner"><div class="small">TIER ${index + 1} UNLOCKED</div><div class="name"></div>${sub ? '<div class="sub"></div>' : ""}<div class="goal"></div>${lifeBack ? `<div class="life"><svg class="heart" viewBox="0 0 24 24" aria-hidden="true">${HEART}</svg>+1 life</div>` : ""}</div>`;
     const name = el.querySelector(".name");
     [...tier.name].forEach((ch, i) => { const s = document.createElement("span"); s.textContent = ch; s.style.setProperty("--i", i); name.appendChild(s); });
     if (sub) el.querySelector(".sub").textContent = sub;
@@ -2107,29 +2464,48 @@ const UI = {
 
   // Counts a number up from 0, slowing down as it arrives.
   countUp(el, to, delay) {
-    el.textContent = to && !REDUCED ? 0 : to;
+    el.textContent = Math.round(to).toLocaleString("en-US");
     if (!to || REDUCED) return;
-    const dur = Math.min(1100, 300 + to * 45);
+    const dur = Math.min(1100, 300 + to * 45), show = (n) => Math.round(n).toLocaleString("en-US");
+    el.textContent = show(0);
     setTimeout(() => {
       const t0 = performance.now();
       const step = (now) => {
         const k = Math.min(1, (now - t0) / dur);
-        el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+        el.textContent = show(to * (1 - Math.pow(1 - k, 3)));
         if (k < 1) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
     }, delay);
   },
 
+  // The row of hearts. `change` plays the losing or the gaining of a life.
+  renderLives(change) {
+    const box = $("hearts"), n = Game.lives;
+    box.setAttribute("aria-label", `${n} of ${LIVES} lives`);
+    box.innerHTML = Array.from({ length: LIVES }, (_, i) => {
+      const cls = i < n ? (change === "gain" && i === n - 1 ? " gain" : "") : " gone" + (change === "lose" && i === n ? " lose" : "");
+      return `<svg class="heart${cls}" viewBox="0 0 24 24" aria-hidden="true">${HEART}</svg>`;
+    }).join("");
+  },
+
+  // "Correct answer: ..." for the question that was missed.
+  answerLine(el, q) {
+    if (q.kind === "typed") el.textContent = "Correct answer: " + q.answers.join(" or ").replace(/-/g, "−");
+    else if (q.html) el.innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
+    else el.textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+  },
+
   // The answer and explanation of a missed question, shown in the card until the player continues.
-  showReview({ q, timedOut, from, to, tier }) {
+  showReview({ q, timedOut, from, to, tier, lives }) {
+    $("cr-lives").textContent = lives === 1 ? "You lost a life. This is your last one." : `You lost a life. ${lives} left.`;
     $("cr-title").textContent = timedOut ? "Time's up" : "Not quite";
-    if (q.html) $("cr-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
-    else $("cr-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+    this.answerLine($("cr-ans"), q);
     this.put($("cr-exp"), q.explanation, q.html);
     $("cr-back").textContent = from === to ? `You stay at ${to}, the start of ${tier.name}.` : `Back to ${to}, the start of ${tier.name}.`;
     $("cr-id").textContent = q.ref ? "Question " + q.ref : "";
     const box = $("cardreview");
+    $("btn-check").classList.add("hidden"); // Continue takes its place
     box.classList.remove("hidden");
     setTimeout(() => {
       if (box.classList.contains("hidden")) return;
@@ -2138,32 +2514,33 @@ const UI = {
     }, 500);
   },
 
-  dropCounter() { const num = $("counter-num"); num.classList.remove("in", "drop"); void num.offsetWidth; num.classList.add("drop"); },
+  // A miss sends the streak back: the streak chip shows it.
+  dropCounter() { for (const id of ["stat-streak", "stat-mult"]) { const el = $(id); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("drop"); } },
+  streakRect() { const r = $("stat-streak").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
 
-  showOver({ final, timedOut, isNewBest, q, peak, correct, answered }) {
+  showOver({ final, timedOut, isNewBest, q, peak, correct, answered, streak }) {
     $("card").style.opacity = 0;
     setTimeout(() => {
       this.show("over");
-      $("over-title").textContent = timedOut ? "Time's up" : "Run over";
+      $("over-title").textContent = "Out of lives";
       $("over-acc").textContent = (answered ? Math.round((correct / answered) * 100) : 0) + "%";
       $("over-acc-sub").textContent = `accuracy · ${correct} of ${answered}`;
       this.countUp($("final"), final, 800);
       $("newbest").classList.toggle("hidden", !isNewBest);
-      const best = Store.data.best, next = TIERS[Game.tierFor(final) + 1];
+      const best = Store.data.bestScore;
       let msg;
-      if (isNewBest) msg = "That's your longest streak yet.";
+      if (isNewBest) msg = "That's your best score yet.";
       else if (final === 0) msg = "Shake it off. The next one's yours.";
-      else if (next && next.min - final <= 2) msg = `So close: ${next.min - final} more would have reached ${next.name}.`;
-      else if (best > final) msg = `${best - final} short of your best. Go again.`;
+      else if (best > final) msg = `${Score.show(best - final)} short of your best. Go again.`;
       else msg = "You matched your best. One more beats it.";
       $("over-msg").textContent = msg;
-      $("over-best").textContent = best;
+      $("over-best").textContent = Score.show(best);
+      $("over-streak").textContent = streak;
       $("over-tier").textContent = TIERS[peak].name;
       $("over-tier").style.color = TIERS[peak].colors.accent;
       this.renderPath($("over-path"), peak, true);
       this.put($("over-q"), (q.passage ? q.passage + " " : "") + q.question, q.html);
-      if (q.html) $("over-ans").innerHTML = "Correct answer: " + q.answer + " &nbsp;" + q.choices["ABCD".indexOf(q.answer)].replace(/<\/?p[^>]*>/g, " ");
-      else $("over-ans").textContent = "Correct answer: " + q.choices["ABCD".indexOf(q.answer)];
+      this.answerLine($("over-ans"), q);
       this.put($("over-exp"), q.explanation, q.html);
       $("over-id").textContent = q.ref ? "Question " + q.ref : "";
     }, 250);
@@ -2185,10 +2562,11 @@ $("btn-mute").onclick = () => { Store.data.muted = !Store.data.muted; Store.save
 $("btn-start").onclick = () => { Sound.tap(); startRun(); };
 $("btn-again").onclick = () => { Sound.tap(); startRun(); };
 $("btn-continue").onclick = () => Game.resume();
+$("btn-check").onclick = () => Game.submit();
 $("btn-menu").onclick = () => UI.show("start");
 $("btn-home").onclick = () => { clearInterval(Game.timerId); Game.locked = true; Game.reviewing = false; Visuals.setTier(0); UI.show("start"); };
 
-function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.best; Game.start(); }
+function startRun() { if (!CB.ready && !QUESTIONS.length) { UI.show("start"); return; } Game.bestAtStart = Store.data.bestScore; Game.start(); }
 
 Highlighter.init();
 $("calc-close").onclick = () => { Calc.wanted = false; Calc.sync(); };
@@ -2202,16 +2580,26 @@ document.addEventListener("keydown", (e) => {
   const over = !$("screen-over").classList.contains("hidden");
   const start = !$("screen-start").classList.contains("hidden");
   if (game && Game.reviewing) {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); Game.resume(); }
+    // A held key, or a second press right after the one that checked the answer, must not skip the explanation.
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!e.repeat && performance.now() - Game.missAt > 600) Game.resume(); }
   } else if (game) {
+    // A number or letter picks a choice. Enter checks the picked one.
     const i = "1234".indexOf(e.key) >= 0 ? "1234".indexOf(e.key) : "abcd".indexOf(e.key.toLowerCase());
-    if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.answer(i); }
+    if (Game.isTyped()) { // a typed-answer question: the keys write the answer, Enter checks it
+      if (Game.locked) return;
+      if (/^[\d.\/-]$/.test(e.key) || e.key === "\u2212") { e.preventDefault(); Game.type(e.key === "\u2212" ? "-" : e.key); }
+      else if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); Game.type("back"); }
+      else if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) Game.submit(); }
+    }
+    else if (i >= 0 && e.key.length === 1) { e.preventDefault(); Game.select(i); }
+    else if (e.key === "Enter" && Game.selected != null && !Game.locked) { e.preventDefault(); if (!e.repeat) Game.submit(); }
   } else if ((over || start) && e.key === "Enter") {
-    e.preventDefault(); startRun();
+    e.preventDefault(); if (!e.repeat) startRun();
   }
 });
 
 if (/[?&]selftest\b/.test(location.search)) window.SELFTEST = selfTest();
+if (/[?&]debug\b/.test(location.search)) Debug.show();
 
 $("build").textContent = "Version " + BUILD;
 (async function checkForUpdate() {

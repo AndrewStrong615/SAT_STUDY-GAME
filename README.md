@@ -1,27 +1,52 @@
 # SAT Streak
 
-A one-file SAT study game. Answer real SAT questions in a row.
-Every right answer adds 1 to your streak, and the longer the streak, the more
-epic the world gets: Spark, Flame, Ocean, Storm, Galaxy, Supernova, Legendary.
+A one-file SAT study game. Answer real SAT questions for points.
+Harder questions, faster answers and longer streaks score more, and the longer
+your streak, the more epic the world gets: Spark, Flame, Ocean, Storm, Galaxy,
+Supernova, Legendary.
 
-**The rules.** Each level is a checkpoint. A wrong answer (or running out of
-time) shows you the right answer and the explanation, then sends you back to
-the start of the level you are in: miss at 13 in Ocean and you are back at 10,
-not at 0. In the last level, Legendary, you play until your first miss. That
-miss ends the run, and the end screen shows your accuracy over the whole run
-(right answers out of all questions answered). The same count is shown under
-the streak number while you play.
+**Points.** A right answer earns:
+
+    points = base × streak multiplier × (1 + speed bonus)
+
+- **Base** by difficulty: 100 easy, 150 medium, 200 hard.
+- **Streak multiplier:** ×1.0 at a streak of 0, plus 0.1 for each answer in your
+  streak (×2 at 10, ×3 at 20), up to ×5 at 40. It is the × number shown under
+  your score, and it is the streak you had going into the question.
+- **Speed bonus:** up to +50% for an instant answer, fading evenly to nothing at
+  the par time. Par is the real SAT's pace, 95 seconds for Math and 71 for
+  Reading & Writing, or the timer length when the timer is on. A slow right
+  answer still earns base × streak, and a miss never takes points away.
+
+The result is rounded to the nearest 5. The line under your score shows how the
+last answer was worked out. `POINTS` near the top of the script holds all of
+these numbers. Your best score is saved in your browser.
+
+**The rules.** You start each run with 3 lives, shown as hearts at the top. A
+wrong answer (or running out of time) costs a life. It shows you the right
+answer and the explanation, then sends you back to the start of the level you
+are in: miss at 13 in Ocean and you are back at 10, not at 0. Reaching a new
+level gives one life back, and you never hold more than 3. Losing your last life
+ends the run and you start again from 0. The end screen shows your accuracy over
+the whole run (right answers out of all questions answered). The same count is
+shown under the streak number while you play. `LIVES` near the top of the
+script sets how many you get.
 
 ## Play
 
 Open `index.html` in any browser while you're online. There is nothing to
 install or build.
 
-- Tap an answer or press `1`–`4` (or `A`–`D`). `Enter` continues after a miss, and starts a new run from the start or end
-  screen.
+- Tap an answer or press `1`–`4` (or `A`–`D`) to pick it. Nothing is marked until you check it: tap **Check answer** or
+  press `Enter`. You can change your pick before then. `Enter` also continues after a miss, and starts a new run from the
+  start or end screen.
+- Some math questions have no choices: you type the answer (a touch screen gets a number pad). Any correct form
+  counts, such as `7/2` or `3.5`, and long decimals follow the SAT's rule: `2/3` can be `.6666`, `.6667` or `0.666`.
 - Settings on the start screen: Mixed / Math / Reading & Writing, an optional
-  timer (20, 40 or 75 seconds), and sound.
-- Your best streak and highest tier are saved in your browser.
+  timer (20, 40 or 75 seconds), and sound. Mixed gives an even split: each
+  question's section is a coin flip, but neither section can get more than two
+  questions ahead of the other in a run.
+- Your best score, best streak and highest tier are saved in your browser.
 
 ## Where the questions come from
 
@@ -82,10 +107,13 @@ College Board's replies are cleaned up before they are shown:
   rewritten so every browser draws them.
 - A question is only used when the answer letter, the answer id and the
   explanation all point at the same choice. Anything unclear is skipped, as are
-  typed-answer questions and questions without exactly four choices.
+  multiple-choice questions without exactly four choices.
+- A typed-answer question is only used when every answer in its key is a plain
+  number or fraction, and the explanation agrees where it states the answer.
 
-Open `index.html?selftest` to run 25 made-up sample replies through this code
-and see a pass or fail for each. The game-over card shows a question number, so
+Open `index.html?selftest` to run made-up sample replies through this code
+and see a pass or fail for each. `index.html?debug` lists the kinds of reply the
+game could not use (field names only, never the question). The game-over card shows a question number, so
 a question that still looks wrong can be reported.
 
 ## Test tools
