@@ -18,9 +18,9 @@ Supernova, Legendary.
   Reading & Writing, or the timer length when the timer is on. A slow right
   answer still earns base × streak, and a miss never takes points away.
 
-The result is rounded to the nearest 5. The line under your score shows how the
-last answer was worked out. `POINTS` near the top of the script holds all of
-these numbers. Your best score is saved in your browser.
+The result is rounded to the nearest 5. The game itself doesn't spell the
+formula out: it shows the points each answer earned, your streak and the
+multiplier. `POINTS` near the top of the script holds all of these numbers. Your best score is saved in your browser, and can go on a leaderboard shared across devices (see below).
 
 **The rules.** You start each run with 3 lives, shown as hearts at the top. A
 wrong answer (or running out of time) costs a life. It shows you the right
@@ -115,6 +115,45 @@ Open `index.html?selftest` to run made-up sample replies through this code
 and see a pass or fail for each. `index.html?debug` lists the kinds of reply the
 game could not use (field names only, never the question). The game-over card shows a question number, so
 a question that still looks wrong can be reported.
+
+## The shared leaderboard (optional)
+
+One board for everyone who plays, on every phone and laptop. A player picks a
+name once on each device; the same name on two devices is the same player, and
+the board keeps each player's best run. Only runs finished after the leaderboard
+was switched on count.
+
+Scores live in a free Firebase database (Cloud Firestore) that the page talks
+to directly, because GitHub Pages can only serve files. To switch it on:
+
+1. Go to <https://console.firebase.google.com>, sign in with a Google account
+   and create a project (any name; Google Analytics can stay off).
+2. In the left menu open **Build > Firestore Database** and press **Create
+   database**. Choose **production mode** and any location.
+3. Open the **Rules** tab, replace everything there with the contents of
+   [`firestore.rules`](firestore.rules) and press **Publish**.
+4. Press the gear icon, open **Project settings** and copy the **Project ID**.
+5. Put that ID in `LEADERBOARD.projectId` near the top of the script in
+   `index.html`.
+
+With no Project ID there is no leaderboard and the game plays exactly as
+before. The ID is not a secret. What protects the board is `firestore.rules`:
+
+- Anyone can read the top of the board and add or raise the score under a
+  name. Nobody can lower, rename or delete an entry from the game.
+- A name is 2 to 16 letters or numbers. The game also turns away rude names and
+  never shows one that got in some other way.
+- A score has to be one a real run could reach for the number of right answers
+  sent with it. If you change `POINTS` or add tiers, change the same limits in
+  `firestore.rules` and publish it again.
+
+These checks stop accidents and casual junk, not a determined cheat: the game
+runs in the browser, so a score can't be proven. To remove an entry, open
+**Firestore Database > Data > scores** in the Firebase console and delete it.
+
+If the board can't be reached, the game plays on. Your best run waits on the
+device and is posted the next time the board answers, and the leaderboard
+screen shows the last copy it saved.
 
 ## Test tools
 

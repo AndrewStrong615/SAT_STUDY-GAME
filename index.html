@@ -170,16 +170,24 @@ button:focus-visible, .answer:focus-visible { outline: 3px solid #fff; outline-o
 .counter .ghost { position: absolute; left: 0; right: 0; top: 0; animation: numOut .28s ease-in both; pointer-events: none; }
 @keyframes numIn { 0% { transform: translateY(42%) scale(.55); opacity: 0; } 55% { transform: translateY(-5%) scale(1.22) rotate(-3deg); opacity: 1; } 100% { transform: none; } }
 @keyframes numOut { to { transform: translateY(-55%) scale(.7); opacity: 0; } }
-.statrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
-.stat { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: rgba(10, 12, 20, .55); border: 1px solid var(--card-line); font-size: 13px; font-weight: 800; white-space: nowrap; }
-.stat i { font-style: normal; font-weight: 700; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
-.stat.mult { color: #0a0c14; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-color: transparent; }
-.stat.bump { animation: bump .5s var(--spring); }
-.stat.drop { animation: statDrop .6s ease-out; }
+/* the streak, shown large under the points */
+.streakbar { display: inline-flex; align-items: center; gap: 10px; margin-top: 10px; padding: 7px 14px 7px 12px; border-radius: 999px; background: rgba(10, 12, 20, .62); border: 2px solid var(--accent); box-shadow: 0 0 22px var(--glow), inset 0 0 14px rgba(255, 255, 255, .05); }
+.streakbar .flame { width: clamp(30px, 8.5vw, 40px); height: clamp(30px, 8.5vw, 40px); flex: none; fill: var(--accent2); filter: drop-shadow(0 0 8px var(--accent)); transform-origin: 50% 90%; animation: flicker 1.3s ease-in-out infinite alternate; }
+@keyframes flicker { 0% { transform: scale(1) rotate(-3deg); } 100% { transform: scale(1.1) rotate(3deg); } }
+.streakbar b { font-family: var(--display); font-size: clamp(34px, 10vw, 48px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 14px var(--glow); }
+.streakbar .lbl { font-size: 13px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #fff; opacity: .85; }
+.streakbar .mult { padding: 4px 9px; border-radius: 999px; font-size: 14px; font-weight: 900; color: #0a0c14; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.streakbar.cold { border-color: var(--card-line); box-shadow: none; }
+.streakbar.cold .flame { fill: rgba(255, 255, 255, .3); filter: none; animation: none; }
+.streakbar.cold b { text-shadow: none; opacity: .75; }
+.streakbar.bump { animation: bump .5s var(--spring); }
+.streakbar.drop { animation: statDrop .6s ease-out; }
 @keyframes statDrop { 0%, 60% { background: rgba(255, 77, 94, .55); border-color: var(--bad); transform: scale(1.12); } 100% { transform: none; } }
-.lastgain { min-height: 18px; margin-top: 6px; color: var(--accent2); font-size: 13px; font-weight: 700; text-shadow: 0 1px 8px rgba(0, 0, 0, .7); }
-.lastgain.show { animation: fadeUp .35s ease-out; }
-body.calc-compact .statrow, body.calc-compact .lastgain { display: none; }
+body.calc-compact .streakbar { margin-top: 2px; padding: 3px 10px 3px 8px; gap: 7px; border-width: 1px; }
+body.calc-compact .streakbar .flame { width: 20px; height: 20px; }
+body.calc-compact .streakbar b { font-size: 22px; }
+body.calc-compact .streakbar .lbl { font-size: 10px; }
+body.calc-compact .streakbar .mult { font-size: 11px; padding: 2px 7px; }
 .plus { position: absolute; left: 50%; top: 6%; font-family: var(--display); font-weight: 900; font-size: clamp(22px, 5vw, 32px); color: var(--accent2); text-shadow: 0 0 14px var(--glow); pointer-events: none; animation: plusUp .85s ease-out forwards; }
 @keyframes plusUp { 0% { transform: translateY(22px) scale(.5); opacity: 0; } 20% { transform: translateY(0) scale(1.15); opacity: 1; } 100% { transform: translateY(-44px) scale(1); opacity: 0; } }
 .counterlabel { text-shadow: 0 1px 8px rgba(0,0,0,.7); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; margin-top: 4px; }
@@ -332,6 +340,54 @@ body.shake-hard #app { animation: shakeHard .5s; }
 .review .exp { margin: 0; font-size: 16px; }
 .review .exp.rich, .review .q.rich { max-height: 32vh; overflow: auto; }
 
+/* ---------- leaderboard ---------- */
+.boardbtn { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; margin: 0 0 14px; padding: 12px 16px; border-radius: 18px; text-align: left; cursor: pointer; transition: transform .12s, border-color .2s; }
+.boardbtn:active { transform: scale(.98); }
+@media (hover: hover) { .boardbtn:hover { border-color: var(--accent); } }
+.boardbtn svg { flex: none; }
+.boardbtn .trophy { color: #ffd23f; filter: drop-shadow(0 0 8px rgba(255, 210, 63, .5)); }
+.boardbtn .txt { flex: 1; min-width: 0; }
+.boardbtn b { display: block; font-family: var(--display); font-weight: 900; font-size: 17px; line-height: 1.2; }
+.boardbtn .txt span { display: block; color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boardbtn .go { color: var(--muted); }
+.board { width: 100%; max-width: 560px; margin-top: 3vh; padding: 16px 12px 20px; animation: rise .4s ease-out backwards; }
+.boardhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.boardhead h2 { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 900; letter-spacing: .01em; }
+.boardhead .iconbtn.busy svg { animation: spin .8s linear infinite; }
+.boardyou { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 0; padding: 8px 8px 8px 14px; border-radius: 16px; background: rgba(255, 255, 255, .06); font-size: 15px; text-align: left; }
+.boardyou span { min-width: 0; overflow-wrap: anywhere; }
+.boardyou b { color: var(--accent2); }
+.pillbtn { flex: none; min-height: 44px; color: var(--text); padding: 8px 16px; border-radius: 999px; border: 1px solid var(--card-line); background: rgba(255, 255, 255, .1); font-weight: 700; font-size: 14px; cursor: pointer; transition: transform .12s, border-color .2s; }
+.pillbtn:active { transform: scale(.95); }
+@media (hover: hover) { .pillbtn:hover { border-color: var(--accent); } }
+.boardnote { color: var(--muted); font-size: 14px; margin: 12px 6px 0; text-align: center; }
+.boardnote:empty { display: none; }
+.boardlist { list-style: none; margin: 12px 0 0; padding: 0; }
+.boardlist li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 54px; padding: 8px 12px 8px 8px; border-radius: 14px; text-align: left; }
+.boardlist li:nth-child(odd) { background: rgba(255, 255, 255, .045); }
+.boardlist li.me { background: rgba(138, 180, 255, .16); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.boardlist .rk { text-align: center; font-family: var(--display); font-weight: 900; font-size: 16px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.boardlist li:nth-child(1) .rk { color: #ffd23f; font-size: 20px; } .boardlist li:nth-child(2) .rk { color: #d5dcec; font-size: 18px; } .boardlist li:nth-child(3) .rk { color: #e8a26a; font-size: 18px; }
+.boardlist .who { min-width: 0; }
+.boardlist .nm { display: block; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boardlist .sub { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; line-height: 1.3; white-space: nowrap; }
+.boardlist .sub i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex: none; }
+.boardlist .pts { font-family: var(--display); font-weight: 900; font-size: 19px; font-variant-numeric: tabular-nums; }
+.overboard { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 4px; padding: 8px 8px 8px 14px; border-radius: 16px; background: rgba(255, 255, 255, .06); text-align: left; }
+.overboard p { margin: 0; font-size: 15px; font-weight: 600; min-width: 0; }
+@media (max-width: 400px) { .overboard { flex-direction: column; align-items: stretch; text-align: center; padding: 12px 10px 10px; } }
+.modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: max(9vh, 24px) 16px 16px; background: rgba(4, 5, 10, .78); overflow: auto; animation: fadeUp .2s ease-out; }
+.modalcard { --card: rgba(14, 16, 28, .97); width: 100%; max-width: 420px; padding: 22px 18px 16px; text-align: center; }
+.modalcard h3 { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 900; }
+.modalcard .hint { color: var(--muted); font-size: 14px; margin: 8px 0 14px; }
+.nameinput { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--card-line); background: rgba(255, 255, 255, .08); color: #fff; font: 700 20px/1.2 var(--font); text-align: center; outline: none; }
+.nameinput:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+.nameinput::placeholder { color: rgba(255, 255, 255, .35); font-weight: 500; }
+.namemsg { min-height: 1.4em; margin: 10px 0 0; font-size: 14px; color: #ffb3bb; }
+.namemsg.info { color: var(--accent2); }
+.modalcard .bigbtn { margin-top: 10px; }
+.modalcard .ghostbtn { min-height: 44px; padding: 0 16px; }
+
 /* ---------- overlays ---------- */
 .tierup { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; text-align: center; overflow: hidden; background: radial-gradient(circle, rgba(4,6,14,.82), rgba(2,3,8,.93)); animation: tfade 2.1s ease forwards; cursor: pointer; }
 .tierup .rays { position: absolute; left: 50%; top: 50%; width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax; background: repeating-conic-gradient(var(--glow) 0deg 5deg, transparent 5deg 18deg); opacity: .35; animation: spin 16s linear infinite; -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 58%); mask-image: radial-gradient(circle, #000 0%, transparent 58%); }
@@ -418,6 +474,11 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div class="record glass"><b id="besttier">Spark</b><span>Highest tier</span></div>
     </div>
     <div class="path" id="path" aria-label="The seven tiers"></div>
+    <button class="boardbtn glass hidden" id="btn-board" type="button">
+      <svg class="trophy" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v6a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7M10 18h4"/></svg>
+      <span class="txt"><b>Leaderboard</b><span id="board-sub"></span></span>
+      <svg class="go" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
     <div class="settings glass">
       <h2>Settings</h2>
       <div class="row">
@@ -452,7 +513,7 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     </div>
     <button class="bigbtn" id="btn-start">Start streak</button>
     <p class="credit hidden" id="credit">College Board questions are © College Board, loaded live from its public SAT Suite Question Bank for personal study. Not affiliated with or endorsed by College Board.</p>
-    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. Points for a right answer: 100, 150 or 200 by difficulty, times your streak multiplier (×2 at a streak of 10, up to ×5), plus up to 50% for speed. You have 3 lives: a miss costs one and sends you back to the start of your world, each new world gives one back, and losing all three ends the run. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
+    <p class="howto">Pick an answer with <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span> or a tap, then press <span class="kbd">Enter</span> or tap Check answer to lock it in. Some math questions ask you to type the answer instead. You have 3 lives: a miss costs one and sends you back to the start of your world, each new world gives one back, and losing all three ends the run. Reach 5, 10, 15, 20, 30 and 50 to unlock new worlds. Select text in a passage or question to highlight it, and tap a highlight to remove it. The <s>ABC</s> button lets you cross out choices you have ruled out.</p>
     <p class="howto" id="build" style="opacity:.55;font-size:12px;margin-top:6px"></p>
   </section>
 
@@ -470,12 +531,12 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div class="halo" id="halo"></div>
       <div class="counter" id="counter" aria-live="polite"><span class="num" id="counter-num">0</span></div>
       <div class="counterlabel" id="counterlabel">points</div>
-      <div class="statrow">
-        <span class="stat" id="stat-streak"><i>Streak</i><b id="stat-streak-n">0</b></span>
-        <span class="stat mult" id="stat-mult" title="Streak multiplier">×1.0</span>
-        <span class="stat" id="stat-acc"><i>Right</i><b id="stat-acc-n">0 of 0</b></span>
+      <div>
+        <div class="streakbar cold" id="stat-streak" role="img" aria-label="Streak 0">
+          <svg class="flame" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2c.5 2.7 2 4.4 3.6 6.2 1.5 1.7 2.4 3.6 2.4 5.8a7 7 0 0 1-14 0c0-2.3 1-4.2 2.4-5.6.2 1.8 1 3 2.1 3.5C9.3 8.2 10.6 4.6 13 2z"/></svg>
+          <b id="stat-streak-n">0</b><span class="lbl">streak</span><span class="mult" id="stat-mult" title="Streak multiplier">×1.0</span>
+        </div>
       </div>
-      <div class="lastgain" id="lastgain" aria-live="polite"></div>
     </div>
     <div class="progress">
       <div class="ptrack"><div class="pfill" id="pfill"></div><div class="pticks" id="pticks"></div></div>
@@ -513,6 +574,10 @@ body.calc-compact .progress { margin: 4px auto 10px; }
       <div><b id="over-streak">0</b><span>longest streak</span></div>
       <div><b id="over-tier">Spark</b><span>tier reached</span></div>
     </div>
+    <div class="overboard hidden" id="over-board">
+      <p id="over-board-msg" role="status"></p>
+      <button class="pillbtn" id="over-board-btn" type="button">Leaderboard</button>
+    </div>
     <div class="path" id="over-path" aria-hidden="true"></div>
     <div class="review">
       <h3>The one that got you</h3>
@@ -524,6 +589,30 @@ body.calc-compact .progress { margin: 4px auto 10px; }
     <button class="bigbtn" id="btn-again">Play again</button>
     <button class="ghostbtn" id="btn-menu">Back to start</button>
   </section>
+
+  <!-- LEADERBOARD (shared by everyone who plays; see section 3a) -->
+  <section id="screen-board" class="board glass hidden">
+    <div class="boardhead">
+      <button class="iconbtn" id="board-back" type="button" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <h2>Leaderboard</h2>
+      <button class="iconbtn" id="board-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button>
+    </div>
+    <div class="boardyou"><span id="board-who"></span><button class="pillbtn" id="board-rename" type="button">Change</button></div>
+    <p class="boardnote" id="board-note" role="status"></p>
+    <ol class="boardlist" id="board-list"></ol>
+  </section>
+</div>
+
+<!-- LEADERBOARD NAME -->
+<div id="namedlg" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="namedlg-title">
+  <form class="modalcard glass" id="name-form" novalidate>
+    <h3 id="namedlg-title">Your leaderboard name</h3>
+    <p class="hint">Everyone who plays can see it, so use a nickname, not your full name.</p>
+    <input class="nameinput" id="name-input" type="text" maxlength="16" placeholder="Nickname" aria-label="Leaderboard name" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done">
+    <p class="namemsg" id="name-msg" role="status"></p>
+    <button class="bigbtn" id="name-save" type="submit">Save</button>
+    <button class="ghostbtn" id="name-cancel" type="button">Cancel</button>
+  </form>
 </div>
 
 <!-- HIGHLIGHT BUTTON (appears next to selected text on touch screens) -->
@@ -609,7 +698,21 @@ const TIERS = [
 /* The version of this page, shown at the bottom of the start screen. Raise it
    with every change. The hosted site lets browsers keep an old copy for a
    while, so on the web the page looks for a newer copy of itself and loads it. */
-const BUILD = "16";
+const BUILD = "18";
+
+/* The leaderboard everyone shares, on every phone and laptop. Scores are kept in a
+   free Firebase (Cloud Firestore) database that the page talks to directly.
+   Setup is in the README: make the project, paste firestore.rules into it, and
+   put its Project ID here. With no ID there is no leaderboard and the game plays
+   exactly as before. The ID is not a secret; firestore.rules is what protects the
+   board. If you change POINTS or add tiers, change the limits in firestore.rules too. */
+const LEADERBOARD = {
+  projectId: "",                              // your Firebase Project ID
+  collection: "scores",
+  show: 50,                                   // how many places the board lists
+  apiKey: "",                                 // not needed; only if Firebase ever asks for a Web API key
+  host: "https://firestore.googleapis.com",
+};
 
 /* The Desmos calculator that can open beside math questions.
    With no key, the Desmos website is shown in a frame (nothing to set up).
@@ -656,15 +759,169 @@ const MILESTONES = { 5: "You're on fire! 🔥", 10: "Unstoppable! ⚡", 25: "Abs
    ===================================================================== */
 const STORE_KEY = "satStreak.v1";
 const Store = {
-  data: { bestScore: 0, best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false },
+  // lb: your leaderboard name, your best run since the leaderboard began (`top`), and the
+  // score of yours the board already has (`sent`). A run is posted when `top` beats `sent`.
+  data: { bestScore: 0, best: 0, highestTier: 0, section: "mixed", timer: false, seconds: 40, muted: false, crossOut: false, lb: { name: "", sent: 0, top: null } },
   load() {
     try { Object.assign(this.data, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch (e) { /* private mode: no saving */ }
+    const lb = this.data.lb;
+    this.data.lb = { name: lb && typeof lb.name === "string" ? lb.name : "", sent: lb && Number(lb.sent) || 0, top: lb && lb.top && typeof lb.top === "object" ? lb.top : null };
   },
   save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(this.data)); } catch (e) { /* ignore */ }
   },
 };
 Store.load();
+
+/* =====================================================================
+   3a. LEADERBOARD (one board for every device)
+   Each player has one entry, kept under their name, holding their best run.
+   The same name on a phone and a laptop is the same player. Everything here
+   fails quietly: with no connection the game plays on, the best run waits
+   on this device, and it is posted the next time the board can be reached.
+   ===================================================================== */
+const BOARD_KEY = "satStreak.board.v1";
+// Names nobody should have to read on a shared board. `any` is matched anywhere in the
+// name; `word` only as a whole word, because it also turns up inside ordinary names.
+const RUDE = {
+  any: ["fuck", "shit", "bitch", "cunt", "nigg", "faggot", "whore", "slut", "pussy", "penis", "vagina", "porn", "nazi", "hitler", "retard", "asshole"],
+  word: ["ass", "cock", "dick", "fag", "sex", "rape", "kkk", "cum", "tits", "hoe"],
+};
+const Board = {
+  NAME_MIN: 2, NAME_MAX: 16,
+  rows: null,      // the list last read: [{ name, score, streak, tier, correct }], best first
+  stale: false,    // true when the board could not be reached and `rows` is an older copy
+  at: 0,           // when `rows` was last read from the board
+  busy: null,      // the post that is under way, so two never run at once
+  tried: 0,
+
+  get on() { return !!LEADERBOARD.projectId; },
+  get me() { return Store.data.lb; },
+  root() { return LEADERBOARD.host + "/v1/projects/" + encodeURIComponent(LEADERBOARD.projectId) + "/databases/(default)/documents"; },
+  path(name) { return "/" + LEADERBOARD.collection + "/" + encodeURIComponent("u-" + name.toLowerCase()); },
+
+  // A name as it is stored and shown: letters, numbers, spaces and . _ ' - only.
+  cleanName(raw) {
+    let s = String(raw == null ? "" : raw);
+    try { s = s.normalize("NFC"); } catch (e) { /* keep as typed */ }
+    s = s.replace(/\s+/g, " ").replace(/[^\p{L}\p{N} _.'-]/gu, "").replace(/ +/g, " ").trim();
+    return Array.from(s).slice(0, this.NAME_MAX).join("").trim();
+  },
+  rude(name) {
+    const low = name.toLowerCase().replace(/[0134578@$!]/g, (c) => ({ 0: "o", 1: "i", 3: "e", 4: "a", 5: "s", 7: "t", 8: "b", "@": "a", "$": "s", "!": "i" })[c]);
+    const flat = low.replace(/[^a-z]/g, "");
+    return RUDE.any.some((w) => flat.includes(w)) || low.split(/[^a-z]+/).some((w) => RUDE.word.includes(w)) || RUDE.word.includes(flat);
+  },
+  // What the player typed, as { name } or { error }.
+  checkName(raw) {
+    const name = this.cleanName(raw);
+    if (Array.from(name).length < this.NAME_MIN || !/[\p{L}\p{N}]/u.test(name)) return { error: "Use " + this.NAME_MIN + " to " + this.NAME_MAX + " letters or numbers." };
+    if (this.rude(name)) return { error: "Pick a different name." };
+    return { name };
+  },
+
+  // Could a real run have produced this entry? firestore.rules checks the same limits.
+  sane(r) {
+    const int = Number.isInteger, lo = Math.min(...POINTS.base), hi = Math.max(...POINTS.base) * POINTS.maxMultiplier * (1 + POINTS.speedBonus);
+    return !!r && typeof r.name === "string" && Array.from(this.cleanName(r.name)).length >= this.NAME_MIN
+      && int(r.score) && int(r.streak) && int(r.tier) && int(r.correct)
+      && r.correct >= 1 && r.correct <= 5000 && r.score >= r.correct * lo && r.score <= r.correct * hi
+      && r.streak >= 0 && r.streak <= r.correct && r.tier >= 0 && r.tier < TIERS.length;
+  },
+  // One entry, read from the database's reply.
+  rowFrom(doc) {
+    const f = (doc && doc.fields) || {}, int = (k) => (f[k] && f[k].integerValue != null ? Number(f[k].integerValue) : NaN);
+    return { name: f.name ? f.name.stringValue : undefined, score: int("score"), streak: int("streak"), tier: int("tier"), correct: int("correct") };
+  },
+  // Entries ready to show: nothing impossible, one per name, best first.
+  tidy(list) {
+    const best = new Map();
+    for (const r of list || []) {
+      if (!this.sane(r)) continue;
+      const clean = this.cleanName(r.name), name = this.rude(clean) ? "Player" : clean, key = name.toLowerCase();
+      if (!best.has(key) || best.get(key).score < r.score) best.set(key, { name, score: r.score, streak: r.streak, tier: r.tier, correct: r.correct });
+    }
+    return [...best.values()].sort((a, b) => b.score - a.score).slice(0, LEADERBOARD.show);
+  },
+  // Your place on the list last read (1 = top), or 0 if you are not on it.
+  rank() {
+    const key = this.me.name.toLowerCase();
+    return key && this.rows ? this.rows.findIndex((r) => r.name.toLowerCase() === key) + 1 : 0;
+  },
+  // True when your best run is still waiting to be posted.
+  waiting() { const me = this.me; return !!(me.top && me.top.score > me.sent); },
+
+  // Called after every right answer: remember the best run, so it survives a closed tab.
+  note(game) {
+    const me = this.me;
+    if (!me.top || game.score > me.top.score) me.top = { score: game.score, streak: game.peakStreak, tier: game.peakTierThisRun, correct: game.correct };
+  },
+
+  async call(path, init) {
+    const ctl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = setTimeout(() => ctl && ctl.abort(), 8000);
+    try {
+      const opts = Object.assign({ cache: "no-store" }, init, ctl ? { signal: ctl.signal } : null);
+      if (opts.body) opts.headers = { "Content-Type": "application/json" };
+      const r = await fetch(this.root() + path + (LEADERBOARD.apiKey ? "?key=" + encodeURIComponent(LEADERBOARD.apiKey) : ""), opts);
+      let json = null;
+      try { json = await r.json(); } catch (e) { /* no body */ }
+      return { status: r.status, json };
+    } finally { clearTimeout(timer); }
+  },
+
+  // Read the top of the board. Returns false, keeping the last copy, if it can't be reached.
+  async load() {
+    if (!this.on) return false;
+    try {
+      const query = { structuredQuery: { from: [{ collectionId: LEADERBOARD.collection }], orderBy: [{ field: { fieldPath: "score" }, direction: "DESCENDING" }], limit: LEADERBOARD.show + 10 } };
+      const { status, json } = await this.call(":runQuery", { method: "POST", body: JSON.stringify(query) });
+      if (status !== 200 || !Array.isArray(json)) throw new Error("leaderboard " + status);
+      this.rows = this.tidy(json.filter((x) => x && x.document).map((x) => this.rowFrom(x.document)));
+      this.stale = false; this.at = Date.now();
+      try { localStorage.setItem(BOARD_KEY, JSON.stringify(this.rows)); } catch (e) { /* ignore */ }
+      return true;
+    } catch (e) {
+      if (!this.rows) { try { this.rows = this.tidy(JSON.parse(localStorage.getItem(BOARD_KEY) || "null")); if (!this.rows.length) this.rows = null; } catch (e2) { this.rows = null; } }
+      this.stale = true;
+      return false;
+    }
+  },
+
+  // The entry under a name, or null if nobody has it. Throws if the board can't be reached.
+  async lookup(name) {
+    const { status, json } = await this.call(this.path(name), { method: "GET" });
+    if (status === 404) return null;
+    if (status !== 200) throw new Error("leaderboard " + status);
+    return this.rowFrom(json);
+  },
+
+  // Post your best run if the board doesn't have it yet. Resolves to:
+  //   "sent"  posted          "kept"  the board already had a score as good (from another device)
+  //   "none"  nothing to post "fail"  couldn't reach the board; it will be tried again later
+  post() {
+    if (this.busy) return this.busy;
+    const me = this.me, run = me.top, name = me.name;
+    if (!this.on || !name || !run || run.score <= me.sent || !this.sane(Object.assign({ name }, run))) return Promise.resolve("none");
+    this.tried = Date.now();
+    this.busy = (async () => {
+      try {
+        const have = await this.lookup(name);
+        if (have && have.score >= run.score) { if (me.name === name) { me.sent = run.score; Store.save(); } return "kept"; }
+        const int = (n) => ({ integerValue: String(n) });
+        const fields = { name: { stringValue: name }, score: int(run.score), streak: int(run.streak), tier: int(run.tier), correct: int(run.correct), v: int(parseInt(BUILD, 10) || 0) };
+        const { status } = await this.call(this.path(name), { method: "PATCH", body: JSON.stringify({ fields }) });
+        if (status !== 200) throw new Error("leaderboard " + status);
+        if (me.name === name) { me.sent = run.score; Store.save(); }
+        return "sent";
+      } catch (e) { return "fail"; }
+      finally { this.busy = null; }
+    })();
+    return this.busy;
+  },
+  // Quietly try again to post a waiting run, but not over and over.
+  retry() { if (this.on && this.me.name && this.waiting() && Date.now() - this.tried > 20000) this.post(); },
+};
 
 /* Questions you have already been shown, remembered between visits so the same
    one doesn't come back until you have been through all the others. Only the
@@ -1154,6 +1411,18 @@ function selfTest() {
       for (let i = 0; i < 400; i++) { const s = Mix.pick(); Mix.dealt(s); if (s === "math") math++; if (Math.abs(Mix.lead) > 2) ok = false; }
       Mix.lead = keep;
       return ok && Math.abs(math - 200) <= 1;
+    })()],
+    ["leaderboard names are trimmed to letters, numbers and a few marks", Board.cleanName("  <b>Sam</b>   the\n1st!! ") === "bSamb the 1st" && Board.cleanName("José O'Neil-Smith Jr. the Third") === "José O'Neil-Smit" && Board.cleanName(null) === ""],
+    ["leaderboard names need 2 to 16 letters or numbers", !!Board.checkName("A").error && !!Board.checkName("--").error && Board.checkName(" Mia_7 ").name === "Mia_7" && Board.checkName("李雷").name === "李雷"],
+    ["rude leaderboard names are turned away, ordinary ones are not", !!Board.checkName("sh1t head").error && !!Board.checkName("big ass").error && !Board.checkName("Cassie").error && !Board.checkName("Hancock").error && !Board.checkName("Essex").error],
+    ["a leaderboard entry must be a score a real run could reach", (() => {
+      const r = (over) => Object.assign({ name: "Sam", score: 1200, streak: 5, tier: 1, correct: 6 }, over);
+      return Board.sane(r()) && !Board.sane(r({ score: 99999 })) && !Board.sane(r({ score: 500 })) && !Board.sane(r({ streak: 7 })) && !Board.sane(r({ tier: TIERS.length })) && !Board.sane(r({ score: 1200.5 })) && !Board.sane(r({ name: "<>" })) && !Board.sane(r({ correct: 0, score: 0, streak: 0 })) && !Board.sane(null);
+    })()],
+    ["the leaderboard shows one entry per name, best first", (() => {
+      const doc = (name, score, correct) => ({ fields: { name: { stringValue: name }, score: { integerValue: String(score) }, streak: { integerValue: "1" }, tier: { integerValue: "0" }, correct: { integerValue: String(correct) } } });
+      const rows = Board.tidy([doc("Sam", 1000, 5), doc("Ana", 3000, 5), doc("sam", 2000, 5), doc("Cheat", 900000, 5), doc("<i>Bo</i>", 1500, 5), { fields: {} }].map((d) => Board.rowFrom(d)));
+      return rows.map((r) => r.name + ":" + r.score).join(",") === "Ana:3000,sam:2000,iBoi:1500";
     })()],
   ];
   const failed = checks.filter(([, ok]) => !ok);
@@ -1746,7 +2015,7 @@ const Game = {
   lives: LIVES,             // a miss costs one; a new world gives one back; none left ends the run
   score: 0, peakStreak: 0,  // points this run, and the longest streak reached in it
   shownAt: 0,               // when the current question appeared, for the speed bonus
-  lastGain: null,           // how the last right answer's points were worked out
+  lastGain: null,           // the points the last right answer earned
   reviewing: false,         // true while the explanation of a missed question is on screen
   locked: false, timerId: null, timeLeft: 0,
   selected: null,           // the choice you have picked but not yet checked (its place on screen)
@@ -1890,7 +2159,6 @@ const Game = {
     const gain = Score.points(this.current, this.streak, (performance.now() - this.shownAt) / 1000);
     this.streak++; this.correct++; this.answered++;
     this.peakStreak = Math.max(this.peakStreak, this.streak);
-    gain.difficulty = ["Easy", "Medium", "Hard"][(this.current.difficulty || 2) - 1];
     this.score += gain.total; this.lastGain = gain;
     if (this.score > Store.data.bestScore) Store.data.bestScore = this.score;
     UI.markRight(displayIndex);
@@ -1903,6 +2171,7 @@ const Game = {
     if (lifeBack) this.lives++;
     if (streak > Store.data.best) Store.data.best = streak;
     if (newTier > Store.data.highestTier) Store.data.highestTier = newTier;
+    Board.note(this);
     Store.save();
     const colors = [tier.colors.accent, tier.colors.accent2, "#ffffff"];
     const from = UI.answerRect(displayIndex), to = UI.counterRect();
@@ -2154,8 +2423,8 @@ const ICONS = {
 };
 const UI = {
   show(name) {
-    for (const s of ["start", "game", "over"]) $("screen-" + s).classList.toggle("hidden", s !== name);
-    if (name === "start") this.renderStart();
+    for (const s of ["start", "game", "over", "board"]) $("screen-" + s).classList.toggle("hidden", s !== name);
+    if (name === "start") { this.renderStart(); Board.retry(); }
     Calc.sync(); // the calculator only belongs to the game screen
     window.scrollTo(0, 0);
   },
@@ -2181,6 +2450,8 @@ const UI = {
     $("besttier").textContent = top.name;
     $("besttier").style.color = top.colors.accent;
     this.renderPath($("path"), TIERS.indexOf(top), false);
+    $("btn-board").classList.toggle("hidden", !Board.on);
+    $("board-sub").textContent = Board.me.name ? "Playing as " + Board.me.name : "Add your name to join";
     for (const [id, key] of [["set-section", "section"], ["set-seconds", "seconds"]]) {
       $(id).querySelectorAll("button").forEach((b) => b.classList.toggle("on", String(Store.data[key]) === b.dataset.v));
     }
@@ -2214,7 +2485,7 @@ const UI = {
   renderMute() { $("btn-mute").innerHTML = Store.data.muted ? ICONS.soundOff : ICONS.soundOn; },
 
   // pop = the streak just grew: roll the number, pulse the glow and float a "+1".
-  // The points counter, the streak chips under it, the level pill and the progress bar.
+  // The points counter, the streak under it, the level pill and the progress bar.
   // `pop` plays the arrival of new points.
   renderStreak(pop) {
     const s = Game.streak, i = Game.tierFor(s), tier = TIERS[i], next = TIERS[i + 1];
@@ -2232,17 +2503,15 @@ const UI = {
       plus.className = "plus"; plus.textContent = "+" + Score.show(gain ? gain.total : 0); plus.setAttribute("aria-hidden", "true");
       plus.style.left = Math.min(c.parentNode.clientWidth - 96, c.offsetLeft + c.offsetWidth + 4) + "px"; // just right of the number
       c.parentNode.appendChild(plus); setTimeout(() => plus.remove(), 900);
-      for (const id of ["stat-streak", "stat-mult"]) { const el = $(id); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("bump"); }
+      { const el = $("stat-streak"); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("bump"); }
     } else {
       num.textContent = text; num.classList.remove("in");
     }
     $("stat-streak-n").textContent = s;
+    $("stat-streak").classList.toggle("cold", s === 0);
+    $("stat-streak").setAttribute("aria-label", "Streak " + s);
     $("stat-mult").textContent = "×" + Score.multiplier(s).toFixed(1);
-    $("stat-acc-n").textContent = `${Game.correct} of ${Game.answered}`;
-    // How the last right answer was scored, so the points make sense.
-    const line = $("lastgain"), was = line.textContent;
-    line.textContent = gain ? `+${Score.show(gain.total)} = ${gain.difficulty} ${gain.base} × ${gain.mult.toFixed(1)} streak` + (gain.speed >= 0.005 ? ` + ${Math.round(gain.speed * 100)}% speed` : "") : "";
-    if (pop && line.textContent !== was) { line.classList.remove("show"); void line.offsetWidth; line.classList.add("show"); }
+    $("counterlabel").textContent = Game.answered ? `points · ${Game.correct} of ${Game.answered} right` : "points";
     const pill = $("tiername"), label = `Tier ${i + 1} · ${tier.name}`;
     if (pop && pill.textContent !== label) { pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump"); }
     pill.textContent = label;
@@ -2514,9 +2783,78 @@ const UI = {
     }, 500);
   },
 
-  // A miss sends the streak back: the streak chip shows it.
-  dropCounter() { for (const id of ["stat-streak", "stat-mult"]) { const el = $(id); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("drop"); } },
+  // A miss sends the streak back: the streak display shows it.
+  dropCounter() { const el = $("stat-streak"); el.classList.remove("bump", "drop"); void el.offsetWidth; el.classList.add("drop"); },
   streakRect() { const r = $("stat-streak").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
+
+  /* ---------- leaderboard ---------- */
+  openBoard() {
+    this.boardFrom = $("screen-over").classList.contains("hidden") ? "start" : "over";
+    this.show("board");
+    this.renderBoard();
+    if (!Board.rows || Board.stale || Board.waiting() || Date.now() - Board.at > 30000) this.refreshBoard();
+  },
+  async refreshBoard() {
+    if (this.boardBusy) return;
+    this.boardBusy = true; this.renderBoard();
+    await Board.post();
+    await Board.load();
+    this.boardBusy = false; this.renderBoard();
+  },
+  renderBoard() {
+    const me = Board.me, rows = Board.rows || [], key = me.name.toLowerCase(), list = $("board-list");
+    const who = $("board-who");
+    who.textContent = me.name ? "Playing as " : "You're not on the board yet.";
+    if (me.name) { const b = document.createElement("b"); b.textContent = me.name; who.appendChild(b); }
+    $("board-rename").textContent = me.name ? "Change" : "Add name";
+    $("board-refresh").classList.toggle("busy", !!this.boardBusy);
+    list.innerHTML = "";
+    rows.forEach((r, i) => {
+      const li = document.createElement("li"), tier = TIERS[r.tier] || TIERS[0];
+      if (key && r.name.toLowerCase() === key) li.className = "me";
+      li.innerHTML = '<span class="rk"></span><span class="who"><span class="nm"></span><span class="sub"><i></i><span></span></span></span><b class="pts"></b>';
+      li.querySelector(".rk").textContent = i + 1;
+      li.querySelector(".nm").textContent = r.name;
+      li.querySelector(".sub i").style.setProperty("--c", tier.colors.accent);
+      li.querySelector(".sub span").textContent = tier.name + " · streak " + r.streak;
+      li.querySelector(".pts").textContent = Score.show(r.score);
+      list.appendChild(li);
+    });
+    let note = "";
+    if (this.boardBusy && !rows.length) note = "Loading…";
+    else if (this.boardBusy) note = "";
+    else if (Board.stale && rows.length) note = "Can't reach the leaderboard right now. This is the last copy saved on this device.";
+    else if (Board.stale) note = "Can't reach the leaderboard right now. Your scores are safe on this device.";
+    else if (!rows.length) note = "No scores yet. Finish a run to be the first.";
+    else if (me.name && !Board.rank() && me.top && !Board.waiting()) note = "Your best, " + Score.show(me.top.score) + ", isn't in the top " + LEADERBOARD.show + " yet.";
+    if (!this.boardBusy && me.name && Board.waiting() && Board.stale) note += " Your best will be posted when it's back.";
+    if (!this.boardBusy && !me.name && me.top) note = (note ? note + " " : "") + "Add your name to post your best, " + Score.show(me.top.score) + ".";
+    $("board-note").textContent = note.trim();
+  },
+
+  // The leaderboard line on the end screen: posts the run, then says where you stand.
+  async overBoard() {
+    const box = $("over-board"), msg = $("over-board-msg"), btn = $("over-board-btn"), me = Board.me;
+    box.classList.toggle("hidden", !Board.on);
+    if (!Board.on) return;
+    if (!me.name) {
+      msg.textContent = me.top ? "Put your score on the leaderboard." : "See how everyone else is doing.";
+      btn.textContent = me.top ? "Add your name" : "Leaderboard";
+      btn.onclick = me.top ? () => NameDlg.open(() => this.overBoard()) : () => this.openBoard();
+      return;
+    }
+    btn.textContent = "Leaderboard"; btn.onclick = () => this.openBoard();
+    msg.textContent = "Checking the leaderboard…";
+    const turn = (this.overTurn = (this.overTurn || 0) + 1);
+    const result = await Board.post(), ok = await Board.load();
+    if (turn !== this.overTurn) return;
+    const rank = ok ? Board.rank() : 0;
+    if (result === "fail" || (!ok && Board.waiting())) msg.textContent = "Couldn't reach the leaderboard. Your best will be posted next time.";
+    else if (!ok) msg.textContent = result === "sent" ? "Your score is on the leaderboard." : "Couldn't reach the leaderboard right now.";
+    else if (rank) msg.textContent = result === "sent" ? "New best on the leaderboard. You're #" + rank + "." : "You're #" + rank + " on the leaderboard.";
+    else if (me.top) msg.textContent = "You're not in the top " + LEADERBOARD.show + " yet.";
+    else msg.textContent = "Score points to get on the leaderboard.";
+  },
 
   showOver({ final, timedOut, isNewBest, q, peak, correct, answered, streak }) {
     $("card").style.opacity = 0;
@@ -2543,9 +2881,62 @@ const UI = {
       this.answerLine($("over-ans"), q);
       this.put($("over-exp"), q.explanation, q.html);
       $("over-id").textContent = q.ref ? "Question " + q.ref : "";
+      this.overBoard();
     }, 250);
   },
 };
+
+/* The box that asks for a leaderboard name. `then` runs once a name is saved. */
+const NameDlg = {
+  then: null, claim: "", spelling: "", busy: false,
+  get isOpen() { return !$("namedlg").classList.contains("hidden"); },
+  say(text, info) { const m = $("name-msg"); m.textContent = text || ""; m.classList.toggle("info", !!info); },
+  open(then) {
+    this.then = then || null; this.claim = ""; this.spelling = ""; this.busy = false;
+    $("name-input").value = Board.me.name; $("name-save").textContent = "Save"; $("name-save").disabled = false; this.say("");
+    $("namedlg").classList.remove("hidden");
+    const input = $("name-input");
+    input.focus(); // straight from the tap, so a phone brings up its keyboard
+    try { input.select(); } catch (e) { /* ignore */ }
+  },
+  close() { $("namedlg").classList.add("hidden"); this.then = null; },
+  async save() {
+    if (this.busy) return;
+    const { name, error } = Board.checkName($("name-input").value);
+    if (error) { this.say(error); return; }
+    const me = Board.me, key = name.toLowerCase(), same = key === me.name.toLowerCase();
+    // A name someone already has on the board: fine if it is you on another device, so ask once.
+    if (!same && this.claim !== key) {
+      this.busy = true; $("name-save").disabled = true; this.say("Checking…", true);
+      let have = null;
+      try { have = await Board.lookup(name); } catch (e) { /* can't reach the board: take the name anyway */ }
+      this.busy = false; $("name-save").disabled = false; this.say("");
+      if (!this.isOpen) return;
+      if (have && Number.isFinite(have.score)) {
+        this.claim = key;
+        const theirs = Board.cleanName(have.name); // keep the spelling the board already shows
+        this.spelling = theirs.toLowerCase() === key ? theirs : name;
+        this.say("“" + name + "” is already on the board with " + Score.show(have.score) + " points. If that's you on another device, tap “That's me”. If not, pick a different name.", true);
+        $("name-save").textContent = "That's me";
+        return;
+      }
+    }
+    me.name = this.claim === key && this.spelling ? this.spelling : name;
+    if (!same) me.sent = 0; // a new name starts with nothing posted under it
+    Store.save();
+    const then = this.then;
+    this.close();
+    if (then) then();
+  },
+};
+$("name-form").addEventListener("submit", (e) => { e.preventDefault(); NameDlg.save(); });
+$("name-input").addEventListener("input", () => { NameDlg.claim = ""; $("name-save").textContent = "Save"; NameDlg.say(""); });
+$("name-cancel").onclick = () => NameDlg.close();
+$("namedlg").addEventListener("click", (e) => { if (e.target === $("namedlg")) NameDlg.close(); });
+$("btn-board").onclick = () => { Sound.tap(); UI.openBoard(); };
+$("board-back").onclick = () => UI.show(UI.boardFrom || "start");
+$("board-refresh").onclick = () => UI.refreshBoard();
+$("board-rename").onclick = () => NameDlg.open(() => UI.refreshBoard());
 
 /* ---------- wiring ---------- */
 function bindSeg(id, key, cast) {
@@ -2576,6 +2967,7 @@ window.addEventListener("resize", () => Calc.layout());
 document.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target && e.target.closest && e.target.closest("#calc")) return; // typing in the calculator is not an answer
+  if (NameDlg.isOpen) { if (e.key === "Escape") NameDlg.close(); return; } // typing a name is not an answer either
   const game = !$("screen-game").classList.contains("hidden");
   const over = !$("screen-over").classList.contains("hidden");
   const start = !$("screen-start").classList.contains("hidden");
