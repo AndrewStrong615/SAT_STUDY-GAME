@@ -1,0 +1,26 @@
+rules_version = '2';
+// SAT Streak leaderboard. Paste this into Firebase: Firestore Database > Rules > Publish.
+// Anyone can read the board and add or raise their own score. Nobody can lower,
+// rename or delete a score from the game; only the project owner can, in the console.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /scores/{player} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['name', 'score', 'streak', 'tier', 'correct', 'v'])
+          && d.keys().hasAll(['name', 'score', 'streak', 'tier', 'correct'])
+          && d.name is string && d.name.size() >= 2 && d.name.size() <= 32
+          && d.score is int && d.streak is int && d.tier is int && d.correct is int
+          && d.correct >= 1 && d.correct <= 5000
+          && d.score >= d.correct * 100 && d.score <= d.correct * 1500
+          && d.streak >= 0 && d.streak <= d.correct
+          && d.tier >= 0 && d.tier <= 6;
+      }
+      allow get: if true;
+      allow list: if request.query.limit <= 100;
+      allow create: if valid();
+      allow update: if valid() && request.resource.data.score > resource.data.score;
+      allow delete: if false;
+    }
+  }
+}
